@@ -1,5 +1,6 @@
 mod actions;
 mod cli;
+mod tmux_interface;
 
 use clap::Parser;
 
