@@ -3,11 +3,12 @@ mod cli;
 mod persistence;
 mod tmux_interface;
 
-use clap::Parser;
-use tmux_interface::TmuxError;
+use anyhow::{Context, Result};
 
-fn main() -> Result<(), TmuxError> {
+use clap::Parser;
+
+fn main() -> Result<()> {
     let args = cli::Args::parse();
-    actions::handle(args)?;
+    actions::handle(args).context("Failed to execute command")?;
     Ok(())
 }
