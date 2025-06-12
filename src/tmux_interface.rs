@@ -5,13 +5,13 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Pane {
-    id: String,
+    index: String,
     current_command: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Window {
-    id: String,
+    index: String,
     name: String,
     layout: String,
     panes: Vec<Pane>,
@@ -31,8 +31,8 @@ fn parse_pane_string(pane: &str) -> Result<Pane> {
     let mut parts = pane.split(TMUX_FIELD_SEPARATOR);
 
     match (parts.next(), parts.next()) {
-        (Some(id), Some(current_command)) => Ok(Pane {
-            id: id.to_string(),
+        (Some(index), Some(current_command)) => Ok(Pane {
+            index: index.to_string(),
             current_command: current_command.to_string(),
         }),
         _ => anyhow::bail!("Failed to parse pane string: {}", pane),
@@ -43,7 +43,7 @@ fn get_panes(window_id: &str) -> Result<Vec<Pane>> {
     let output = Command::new("tmux")
         .arg("list-panes")
         .args(["-t", window_id])
-        .args(["-F", "#{pane_id} #{pane_current_command}"])
+        .args(["-F", "#{pane_index} #{pane_current_command}"])
         .output()
         .with_context(|| {
             format!(
@@ -66,12 +66,12 @@ fn parse_window_string(window: &str) -> Result<Window> {
     let mut parts = window.split(" ");
 
     match (parts.next(), parts.next(), parts.next()) {
-        (Some(id), Some(name), Some(layout)) => {
-            let id = id.to_string();
-            let panes = get_panes(&id)?;
+        (Some(index), Some(name), Some(layout)) => {
+            let index = index.to_string();
+            let panes = get_panes(&index)?;
 
             Ok(Window {
-                id,
+                index,
                 name: name.to_string(),
                 layout: layout.to_string(),
                 panes,
@@ -86,7 +86,7 @@ fn parse_window_string(window: &str) -> Result<Window> {
 fn get_windows() -> Result<Vec<Window>> {
     let output = Command::new("tmux")
         .arg("list-windows")
-        .args(["-F", "#{window_id} #{window_name} #{window_layout}"])
+        .args(["-F", "#{window_index} #{window_name} #{window_layout}"])
         .output()
         .context("Failed to execute 'tmux list-windows'")?;
 
@@ -136,6 +136,71 @@ pub fn get_session() -> Result<Session> {
     })
 }
 
+fn configure_window(session_name: &str, window: &Window) -> Result<()> {
+    let window_target = format!("{}:{}", session_name, window.index);
+
+    for _ in window.panes.iter().skip(1) {
+        Command::new("tmux")
+            .arg("split-window")
+            .arg("-d")
+            .args(["-t", &window_target])
+            .status()
+            .context("Failed to execute 'tmux split-window'")?;
+    }
+
+    Command::new("tmux")
+        .arg("select-layout")
+        .args(["-t", &window_target, &window.layout])
+        .status()
+        .context("Failed to execute 'tmux select-layout'")?;
+
+    for pane in window.panes.iter() {
+        // println!("{} : command {}", pane.index, pane.current_command);
+
+        Command::new("tmux")
+            .arg("send-keys")
+            .args(["-t", &format!("{}.{}", window_target, pane.index)])
+            .args([&pane.current_command, "C-m"])
+            .status()
+            .context("Failed to send command to pane")?;
+    }
+
+    Ok(())
+}
+
 pub fn restore_session(session: Session) -> Result<()> {
-    todo!();
+    // TODO: check if session already exists
+
+    Command::new("tmux")
+        .arg("new-session")
+        .arg("-d")
+        .args(["-s", &session.name])
+        .args(["-c", &session.path])
+        .status()
+        .context("Failed to execute 'tmux new-session'")?;
+
+    let first_window = &session.windows[0];
+    configure_window(&session.name, first_window)?;
+
+    for window in session.windows.iter().skip(1) {
+        Command::new("tmux")
+            .arg("new-window")
+            .arg("-d")
+            .args(["-t", &format!("{}:", session.name)])
+            .args(["-n", &window.name])
+            .status()
+            .with_context(|| {
+                format!("Failed to create window '{}'", window.name)
+            })?;
+
+        configure_window(&session.name, window)?;
+    }
+
+    Command::new("tmux")
+        .arg("attach-session")
+        .args(["-t", &session.name])
+        .status()
+        .context("Failed to execute 'tmux attach-session'")?;
+
+    Ok(())
 }

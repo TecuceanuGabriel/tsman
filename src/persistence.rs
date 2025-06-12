@@ -4,8 +4,6 @@ use std::path::PathBuf;
 use anyhow::{Context, Result};
 use dirs::home_dir;
 
-use crate::tmux_interface::*;
-
 const CONFIG_DIR: &str = ".tsessions";
 
 fn get_config_file_path(file_name: &str) -> Result<PathBuf> {
@@ -23,7 +21,7 @@ pub fn save_session_config(file_name: &str, data: String) -> Result<()> {
 
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent).with_context(|| {
-            format!("failed to create directory {}", parent.display())
+            format!("Failed to create directory {}", parent.display())
         })?;
     }
 
@@ -31,8 +29,10 @@ pub fn save_session_config(file_name: &str, data: String) -> Result<()> {
     Ok(())
 }
 
-pub fn load_session_from_config(file_name: &str) -> Result<Session> {
-    todo!();
+pub fn load_session_from_config(file_name: &str) -> Result<String> {
+    let path = get_config_file_path(file_name)?;
+    let data = fs::read_to_string(path)?;
+    Ok(data)
 }
 
 pub fn list_saved_sessions() -> Result<Vec<String>> {

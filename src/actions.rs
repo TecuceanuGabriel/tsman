@@ -4,8 +4,6 @@ use crate::cli::{Args, Commands};
 use crate::persistence::*;
 use crate::tmux_interface::*;
 
-const BASE_PATH: &str = "";
-
 fn new(_session_name: &str) -> Result<()> {
     todo!();
 }
@@ -26,8 +24,17 @@ fn save(session_name: &str) -> Result<()> {
     Ok(())
 }
 
-fn open(_session_name: &str) -> Result<()> {
-    todo!();
+fn open(session_name: &str) -> Result<()> {
+    let yaml = load_session_from_config(session_name)
+        .context("Failed to read session from config file")?;
+
+    let session: Session = serde_yaml::from_str(&yaml).with_context(|| {
+        format!("Failed to deserialize session from yaml {}", yaml)
+    })?;
+
+    restore_session(session).context("Failed to restore session")?;
+
+    Ok(())
 }
 
 fn edit(_session_name: &str) -> Result<()> {
