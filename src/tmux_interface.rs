@@ -1,4 +1,5 @@
-use std::{io, process::Command, string};
+use serde::{Deserialize, Serialize};
+use std::{io, process::Command};
 
 #[derive(Debug)]
 pub enum TmuxError {
@@ -19,13 +20,13 @@ impl From<std::string::FromUtf8Error> for TmuxError {
     }
 }
 
-#[derive(Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Pane {
     id: String,
     current_command: String,
 }
 
-#[derive(Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Window {
     id: String,
     name: String,
@@ -33,9 +34,9 @@ pub struct Window {
     panes: Vec<Pane>,
 }
 
-#[derive(Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Session {
-    name: String,
+    pub name: String,
     path: String,
     windows: Vec<Window>,
 }
@@ -123,7 +124,7 @@ fn get_session_info() -> Result<(String, String), TmuxError> {
 
     let string_output = String::from_utf8(output.stdout)?;
 
-    let mut parts = string_output.split(" "); // TODO: const for separator?
+    let mut parts = string_output.trim().split(" "); // TODO: const for separator?
 
     match (parts.next(), parts.next()) {
         (Some(session_name), Some(session_path)) => {

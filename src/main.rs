@@ -1,10 +1,13 @@
 mod actions;
 mod cli;
+mod persistence;
 mod tmux_interface;
 
 use clap::Parser;
+use tmux_interface::TmuxError;
 
-fn main() {
+fn main() -> Result<(), TmuxError> {
     let args = cli::Args::parse();
-    actions::handle(args);
+    actions::handle(args)?;
+    Ok(())
 }
