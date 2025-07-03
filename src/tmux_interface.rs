@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Pane {
     index: String,
-    current_command: String,
+    current_command: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -27,14 +27,51 @@ pub struct Session {
 const TMUX_FIELD_SEPARATOR: &str = " ";
 const TMUX_LINE_SEPARATOR: &str = "\n";
 
+fn get_process_children(pid: u32) -> Result<Vec<String>> {
+    let output = Command::new("ps")
+        .args(["-o", "args="])
+        .args(["--ppid", &pid.to_string()])
+        .output()
+        .with_context(|| {
+            format!("Failed to get children of process #{}", pid)
+        })?;
+
+    let mut children = Vec::new();
+    let output_str = String::from_utf8(output.stdout)?;
+
+    for line in output_str.lines() {
+        let mut parts = line.trim().split(' ');
+        if let Some(args) = parts.next() {
+            children.push(args.to_string());
+        } else {
+            anyhow::bail!("Failed to parse process children: #{}", pid);
+        }
+    }
+
+    Ok(children)
+}
+
+fn get_foreground_process(shell_pid: u32) -> Result<Option<String>> {
+    match get_process_children(shell_pid) {
+        Ok(children) => Ok(children.first().cloned()),
+        _ => Ok(None),
+    }
+}
+
 fn parse_pane_string(pane: &str) -> Result<Pane> {
     let mut parts = pane.split(TMUX_FIELD_SEPARATOR);
 
     match (parts.next(), parts.next()) {
-        (Some(index), Some(current_command)) => Ok(Pane {
-            index: index.to_string(),
-            current_command: current_command.to_string(),
-        }),
+        (Some(index), Some(pid_str)) => {
+            let pid = pid_str.parse::<u32>()?;
+
+            let current_command = get_foreground_process(pid)?;
+
+            Ok(Pane {
+                index: index.to_string(),
+                current_command,
+            })
+        }
         _ => anyhow::bail!("Failed to parse pane string: {}", pane),
     }
 }
@@ -43,7 +80,7 @@ fn get_panes(window_id: &str) -> Result<Vec<Pane>> {
     let output = Command::new("tmux")
         .arg("list-panes")
         .args(["-t", window_id])
-        .args(["-F", "#{pane_index} #{pane_current_command}"])
+        .args(["-F", "#{pane_index} #{pane_pid}"])
         .output()
         .with_context(|| {
             format!(
@@ -155,12 +192,10 @@ fn configure_window(session_name: &str, window: &Window) -> Result<()> {
         .context("Failed to execute 'tmux select-layout'")?;
 
     for pane in window.panes.iter() {
-        // println!("{} : command {}", pane.index, pane.current_command);
-
         Command::new("tmux")
             .arg("send-keys")
             .args(["-t", &format!("{}.{}", window_target, pane.index)])
-            .args([&pane.current_command, "C-m"])
+            .args([&pane.current_command.as_ref().unwrap(), "C-m"])
             .status()
             .context("Failed to send command to pane")?;
     }
