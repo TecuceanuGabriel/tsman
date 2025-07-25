@@ -1,10 +1,11 @@
+use std::fs::write;
 use std::process::Command;
-use std::thread::sleep_ms;
-use std::{fs::write, thread::sleep};
-use tempfile::NamedTempFile;
+use std::thread::sleep;
+use std::time::Duration;
 
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
+use tempfile::NamedTempFile;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Pane {
@@ -232,7 +233,7 @@ pub fn restore_session(session: Session) -> Result<()> {
         .status()
         .context("Failed to reconstruct session")?;
 
-    sleep_ms(700);
+    sleep(Duration::from_millis(700));
 
     Command::new("tmux")
         .arg("attach-session")
