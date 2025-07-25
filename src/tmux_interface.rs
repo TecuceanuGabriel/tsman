@@ -1,6 +1,7 @@
 use std::process::Command;
-use std::sync::mpsc;
-use std::thread;
+use std::thread::sleep_ms;
+use std::{fs::write, thread::sleep};
+use tempfile::NamedTempFile;
 
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
@@ -175,111 +176,65 @@ pub fn get_session() -> Result<Session> {
     })
 }
 
-fn configure_window(session_name: &str, window: Window) -> Result<()> {
+fn get_window_config_cmd(session_name: &str, window: Window) -> Result<String> {
     let window_target = format!("{}:{}", session_name, window.index);
 
+    let mut cmd = String::new();
+
     for _ in window.panes.iter().skip(1) {
-        Command::new("tmux")
-            .arg("split-window")
-            .arg("-d")
-            .args(["-t", &window_target])
-            .status()
-            .context("Failed to split window")?;
+        cmd += &format!("tmux split-window -d -t {}\n", window_target);
     }
 
-    Command::new("tmux")
-        .arg("select-layout")
-        .args(["-t", &window_target, &window.layout])
-        .status()
-        .context("Failed to set layout")?;
-
-    let (tx, rx) = mpsc::channel();
-
-    let mut handles = vec![];
+    cmd += &format!(
+        "tmux select-layout -t {} \"{}\"\n",
+        window_target, window.layout
+    );
 
     for pane in window.panes {
-        let tx = tx.clone();
-        let pane_cmd = pane.current_command;
         let pane_target = format!("{}.{}", window_target, pane.index);
 
-        let handle = thread::spawn(move || {
-            let result = Command::new("tmux")
-                .arg("send-keys")
-                .args(["-t", &pane_target])
-                .args([&pane_cmd, "C-m"])
-                .status()
-                .context(format!(
-                    "Failed to send command to pane {}",
-                    pane.index
-                ));
-
-            tx.send(result).unwrap();
-        });
-
-        handles.push(handle)
+        if let Some(pane_cmd) = pane.current_command {
+            cmd += &format!(
+                "tmux send-keys -t {} {} C-m\n",
+                pane_target, pane_cmd
+            );
+        }
     }
 
-    drop(tx);
-    for result in rx {
-        result?;
-    }
-
-    for handle in handles {
-        handle.join().unwrap();
-    }
-
-    Ok(())
+    Ok(cmd)
 }
 
 pub fn restore_session(session: Session) -> Result<()> {
-    Command::new("tmux")
-        .arg("new-session")
-        .arg("-d")
-        .args(["-s", &session.name])
-        .args(["-c", &session.path])
-        .status()
-        .context("Failed to execute 'tmux new-session'")?;
+    let mut script_str = String::new();
+
+    script_str += &format!(
+        "tmux new-session -d -s {} -c {}\n",
+        session.name, session.path
+    );
 
     let first_window = session.windows[0].clone();
-    configure_window(&session.name, first_window)?;
 
-    let session_name = session.name.clone();
-    let windows = session.windows.clone();
+    script_str += &get_window_config_cmd(&session.name, first_window).unwrap();
 
-    let (tx, rx) = mpsc::channel();
-    let mut handles = vec![];
+    for window in session.windows.into_iter().skip(1) {
+        script_str += &format!(
+            "tmux new-window -d -t {} -n {}\n",
+            session.name, window.name
+        );
 
-    for window in windows.into_iter().skip(1) {
-        let tx = tx.clone();
-        let session_name = session_name.clone();
-
-        let handle = thread::spawn(move || {
-            let result = (|| {
-                Command::new("tmux")
-                    .arg("new-window")
-                    .arg("-d")
-                    .args(["-t", &format!("{}:", session_name)])
-                    .args(["-n", &window.name])
-                    .status()
-                    .context("Failed to create window")?;
-
-                configure_window(&session_name, window)
-            })();
-
-            tx.send(result).unwrap();
-        });
-
-        handles.push(handle);
+        script_str += &get_window_config_cmd(&session.name, window).unwrap();
     }
 
-    drop(tx);
-    for result in rx {
-        result.context("Window creation failed")?;
-    }
+    let script = NamedTempFile::new().unwrap();
 
-    for handle in handles {
-        handle.join().unwrap();
-    }
+    write(script.path(), script_str)?;
+
+    Command::new("sh")
+        .arg(script.path())
+        .status()
+        .context("Failed to reconstruct session")?;
+
+    sleep_ms(700);
 
     Command::new("tmux")
         .arg("attach-session")

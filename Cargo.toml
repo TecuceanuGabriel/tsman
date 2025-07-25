@@ -9,3 +9,4 @@ clap = { version = "4.5.39", features = ["derive"] }
 dirs = "4.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.9"
+tempfile = "3.20.0"
