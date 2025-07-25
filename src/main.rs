@@ -4,7 +4,6 @@ mod persistence;
 mod tmux_interface;
 
 use anyhow::{Context, Result};
-
 use clap::Parser;
 
 fn main() -> Result<()> {

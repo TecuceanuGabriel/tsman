@@ -6,16 +6,6 @@ use dirs::home_dir;
 
 const CONFIG_DIR: &str = ".tsessions";
 
-fn get_config_file_path(file_name: &str) -> Result<PathBuf> {
-    let mut path = home_dir()
-        .ok_or_else(|| anyhow::anyhow!("Failed to determine HOME directory"))?;
-
-    path.push(".config");
-    path.push(CONFIG_DIR);
-    path.push(format!("{}.yaml", file_name));
-    Ok(path)
-}
-
 pub fn save_session_config(file_name: &str, data: String) -> Result<()> {
     let path = get_config_file_path(file_name)?;
 
@@ -37,4 +27,14 @@ pub fn load_session_from_config(file_name: &str) -> Result<String> {
 
 pub fn list_saved_sessions() -> Result<Vec<String>> {
     todo!();
+}
+
+fn get_config_file_path(file_name: &str) -> Result<PathBuf> {
+    let mut path = home_dir()
+        .ok_or_else(|| anyhow::anyhow!("Failed to determine HOME directory"))?;
+
+    path.push(".config");
+    path.push(CONFIG_DIR);
+    path.push(format!("{}.yaml", file_name));
+    Ok(path)
 }
