@@ -32,7 +32,7 @@ fn open(session_name: &str) -> Result<()> {
         format!("Failed to deserialize session from yaml {}", yaml)
     })?;
 
-    restore_session(session).context("Failed to restore session")?;
+    restore_session(&session).context("Failed to restore session")?;
 
     Ok(())
 }

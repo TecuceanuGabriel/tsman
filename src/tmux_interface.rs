@@ -11,6 +11,7 @@ use tempfile::NamedTempFile;
 pub struct Pane {
     index: String,
     current_command: Option<String>,
+    work_dir: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -24,12 +25,14 @@ pub struct Window {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Session {
     pub name: String,
-    path: String,
+    work_dir: String,
     windows: Vec<Window>,
 }
 
 const TMUX_FIELD_SEPARATOR: &str = " ";
 const TMUX_LINE_SEPARATOR: &str = "\n";
+
+const ATTACH_DELAY: u64 = 700;
 
 fn get_process_children(pid: u32) -> Result<Vec<String>> {
     let output = Command::new("ps")
@@ -63,8 +66,8 @@ fn get_foreground_process(shell_pid: u32) -> Result<Option<String>> {
 fn parse_pane_string(pane: &str) -> Result<Pane> {
     let mut parts = pane.split(TMUX_FIELD_SEPARATOR);
 
-    match (parts.next(), parts.next()) {
-        (Some(index), Some(pid_str)) => {
+    match (parts.next(), parts.next(), parts.next()) {
+        (Some(index), Some(pid_str), Some(work_dir_str)) => {
             let pid = pid_str.parse::<u32>()?;
 
             let current_command = get_foreground_process(pid)?;
@@ -72,6 +75,7 @@ fn parse_pane_string(pane: &str) -> Result<Pane> {
             Ok(Pane {
                 index: index.to_string(),
                 current_command,
+                work_dir: work_dir_str.to_string(),
             })
         }
         _ => anyhow::bail!("Failed to parse pane string: {}", pane),
@@ -82,7 +86,7 @@ fn get_panes(window_id: &str) -> Result<Vec<Pane>> {
     let output = Command::new("tmux")
         .arg("list-panes")
         .args(["-t", window_id])
-        .args(["-F", "#{pane_index} #{pane_pid}"])
+        .args(["-F", "#{pane_index} #{pane_pid} #{pane_current_path}"])
         .output()
         .with_context(|| {
             format!(
@@ -170,13 +174,13 @@ pub fn get_session() -> Result<Session> {
 
     Ok(Session {
         name,
-        path,
+        work_dir: path,
         windows,
     })
 }
 
-fn get_window_config_cmd(session_name: &str, window: Window) -> Result<String> {
-    let window_target = format!("{}:{}", session_name, window.index);
+fn get_window_config_cmd(session: &Session, window: &Window) -> Result<String> {
+    let window_target = format!("{}:{}", session.name, window.index);
 
     let mut cmd = String::new();
 
@@ -189,10 +193,16 @@ fn get_window_config_cmd(session_name: &str, window: Window) -> Result<String> {
         window_target, window.layout
     );
 
-    for pane in window.panes {
+    for pane in &window.panes {
         let pane_target = format!("{}.{}", window_target, pane.index);
 
-        if let Some(pane_cmd) = pane.current_command {
+        if let Some(pane_cmd) = &pane.current_command {
+            if pane.work_dir != session.work_dir {
+                cmd += &format!(
+                    "tmux send-keys -t {} \"cd {}\" C-m\n",
+                    pane_target, pane.work_dir,
+                )
+            }
             cmd += &format!(
                 "tmux send-keys -t {} \"{}\" C-m\n",
                 pane_target, pane_cmd
@@ -203,28 +213,28 @@ fn get_window_config_cmd(session_name: &str, window: Window) -> Result<String> {
     Ok(cmd)
 }
 
-pub fn restore_session(session: Session) -> Result<()> {
+pub fn restore_session(session: &Session) -> Result<()> {
     let mut script_str = String::new();
 
     script_str += &format!(
         "tmux new-session -d -s {} -c {}\n",
-        session.name, session.path
+        session.name, session.work_dir
     );
 
     let first_window = session.windows[0].clone();
 
-    script_str += &get_window_config_cmd(&session.name, first_window).unwrap();
+    script_str += &get_window_config_cmd(&session, &first_window)?;
 
-    for window in session.windows.into_iter().skip(1) {
+    for window in session.windows.iter().skip(1) {
         script_str += &format!(
             "tmux new-window -d -t {} -n {}\n",
             session.name, window.name
         );
 
-        script_str += &get_window_config_cmd(&session.name, window).unwrap();
+        script_str += &get_window_config_cmd(session, &window)?;
     }
 
-    let script = NamedTempFile::new().unwrap();
+    let script = NamedTempFile::new()?;
 
     write(script.path(), script_str)?;
 
@@ -233,7 +243,7 @@ pub fn restore_session(session: Session) -> Result<()> {
         .status()
         .context("Failed to reconstruct session")?;
 
-    sleep(Duration::from_millis(700));
+    sleep(Duration::from_millis(ATTACH_DELAY));
 
     Command::new("tmux")
         .arg("attach-session")
