@@ -34,29 +34,35 @@ const TMUX_LINE_SEPARATOR: &str = "\n";
 
 const ATTACH_DELAY: u64 = 700;
 
-fn get_process_children(pid: u32) -> Result<Vec<String>> {
+fn get_process_children(shell_pid: &str) -> Result<Vec<(u32, String)>> {
     let output = Command::new("ps")
-        .args(["-o", "args="])
-        .args(["--ppid", &pid.to_string()])
+        .args(["-o", "pid=,args="])
+        .args(["--ppid", shell_pid])
         .output()
         .with_context(|| {
-            format!("Failed to get children of process #{}", pid)
+            format!("Failed to get children of process #{}", shell_pid)
         })?;
 
-    let mut children = Vec::new();
     let output_str = String::from_utf8(output.stdout)?;
+
+    let mut children = Vec::new();
 
     for line in output_str.lines() {
         let trimmed = line.trim();
-        if !trimmed.is_empty() {
-            children.push(trimmed.to_string());
+        if trimmed.is_empty() {
+            continue;
+        }
+        if let Some((pid_str, cmdline)) = trimmed.split_once(' ') {
+            if let Ok(pid) = pid_str.trim().parse::<u32>() {
+                children.push((pid, cmdline.trim().to_string()));
+            }
         }
     }
 
     Ok(children)
 }
 
-fn get_foreground_process(shell_pid: u32) -> Result<Option<String>> {
+fn get_foreground_process(shell_pid: &str) -> Result<Option<(u32, String)>> {
     match get_process_children(shell_pid) {
         Ok(children) => Ok(children.first().cloned()),
         _ => Ok(None),
@@ -67,10 +73,15 @@ fn parse_pane_string(pane: &str) -> Result<Pane> {
     let mut parts = pane.split(TMUX_FIELD_SEPARATOR);
 
     match (parts.next(), parts.next(), parts.next()) {
-        (Some(index), Some(pid_str), Some(work_dir_str)) => {
-            let pid = pid_str.parse::<u32>()?;
+        (Some(index), Some(pid), Some(work_dir_str)) => {
+            let process = get_foreground_process(pid)?;
 
-            let current_command = get_foreground_process(pid)?;
+            let current_command = match process {
+                Some((cmd_pid, cmdline)) if std::process::id() != cmd_pid => {
+                    Some(cmdline)
+                }
+                _ => None,
+            };
 
             Ok(Pane {
                 index: index.to_string(),
