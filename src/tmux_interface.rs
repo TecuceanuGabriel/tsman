@@ -43,11 +43,9 @@ fn get_process_children(pid: u32) -> Result<Vec<String>> {
     let output_str = String::from_utf8(output.stdout)?;
 
     for line in output_str.lines() {
-        let mut parts = line.trim().split(' ');
-        if let Some(args) = parts.next() {
-            children.push(args.to_string());
-        } else {
-            anyhow::bail!("Failed to parse process children: #{}", pid);
+        let trimmed = line.trim();
+        if !trimmed.is_empty() {
+            children.push(trimmed.to_string());
         }
     }
 
@@ -195,7 +193,7 @@ fn get_window_config_cmd(session_name: &str, window: Window) -> Result<String> {
 
         if let Some(pane_cmd) = pane.current_command {
             cmd += &format!(
-                "tmux send-keys -t {} {} C-m\n",
+                "tmux send-keys -t {} \"{}\" C-m\n",
                 pane_target, pane_cmd
             );
         }
