@@ -48,42 +48,66 @@ pub fn get_session() -> Result<Session> {
 }
 
 pub fn restore_session(session: &Session) -> Result<()> {
-    let mut script_str = String::new();
+    let output = Command::new("tmux")
+        .arg("list-session")
+        .args(["-F", "#{session_name}"])
+        .output()
+        .context("Failed to get sessions")?;
 
-    script_str += &format!(
-        "tmux new-session -d -s {} -c {}\n",
-        session.name, session.work_dir
-    );
+    let output_str = String::from_utf8(output.stdout)?;
+    let session_names =
+        output_str.split(TMUX_LINE_SEPARATOR).collect::<Vec<&str>>();
 
-    let first_window = &session.windows[0];
+    if !session_names.contains(&session.name.as_str()) {
+        let mut script_str = String::new();
 
-    script_str += &get_window_config_cmd(&session, &first_window)?;
-
-    for window in session.windows.iter().skip(1) {
         script_str += &format!(
-            "tmux new-window -d -t {} -n {}\n",
-            session.name, window.name
+            "tmux new-session -d -s {} -c {}\n",
+            session.name, session.work_dir
         );
 
-        script_str += &get_window_config_cmd(session, &window)?;
+        let first_window = &session.windows[0];
+
+        script_str += &get_window_config_cmd(&session, &first_window)?;
+
+        for window in session.windows.iter().skip(1) {
+            script_str += &format!(
+                "tmux new-window -d -t {} -n {}\n",
+                session.name, window.name
+            );
+
+            script_str += &get_window_config_cmd(session, &window)?;
+        }
+
+        let script = NamedTempFile::new()?;
+
+        write(script.path(), script_str)?;
+
+        Command::new("sh")
+            .arg(script.path())
+            .status()
+            .context("Failed to reconstruct session")?;
+
+        sleep(Duration::from_millis(ATTACH_DELAY));
     }
 
-    let script = NamedTempFile::new()?;
-
-    write(script.path(), script_str)?;
-
-    Command::new("sh")
-        .arg(script.path())
-        .status()
-        .context("Failed to reconstruct session")?;
-
-    sleep(Duration::from_millis(ATTACH_DELAY));
-
-    Command::new("tmux")
-        .arg("attach-session")
+    let output = Command::new("tmux")
+        .arg("display-message")
         .args(["-t", &session.name])
-        .status()
-        .context("Failed to attach session")?;
+        .args(["-p", "#{session_attached}"])
+        .output()
+        .context("Failed to get current session")?;
+
+    let output_str = String::from_utf8(output.stdout)?;
+    let is_session_attached = output_str.trim() == "1";
+
+    if !is_session_attached {
+        Command::new("tmux")
+            .arg("attach-session")
+            .args(["-t", &session.name])
+            .status()
+            .context("Failed to attach session")?;
+    }
 
     Ok(())
 }
