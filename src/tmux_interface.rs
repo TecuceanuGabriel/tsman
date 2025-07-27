@@ -5,6 +5,7 @@ use std::time::Duration;
 
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
+use shell_escape::escape;
 use tempfile::NamedTempFile;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -248,13 +249,15 @@ fn get_window_config_cmd(session: &Session, window: &Window) -> Result<String> {
         if let Some(pane_cmd) = &pane.current_command {
             if pane.work_dir != session.work_dir {
                 cmd += &format!(
-                    "tmux send-keys -t {} \"cd {}\" C-m\n", // TODO: fix escaping
-                    pane_target, pane.work_dir,
+                    "tmux send-keys -t {} {} C-m\n",
+                    pane_target,
+                    escape(format!("cd {}", pane.work_dir).into()),
                 )
             }
             cmd += &format!(
-                "tmux send-keys -t {} \"{}\" C-m\n",
-                pane_target, pane_cmd
+                "tmux send-keys -t {} {} C-m\n",
+                pane_target,
+                escape(pane_cmd.into())
             );
         }
     }
