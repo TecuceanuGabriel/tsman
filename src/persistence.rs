@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::PathBuf;
 
-use anyhow::{Context, Result, anyhow};
+use anyhow::{Context, Result};
 use dirs::home_dir;
 
 const CONFIG_DIR: &str = ".tsessions"; // TODO: make this configurable
@@ -36,9 +36,11 @@ pub fn list_saved_sessions() -> Result<Vec<String>> {
 
         let name = path
             .file_stem()
-            .ok_or_else(|| anyhow!("Missing file stem for {:?}", path))?
+            .ok_or_else(|| anyhow::anyhow!("Missing file stem for {:?}", path))?
             .to_str()
-            .ok_or_else(|| anyhow!("Invalid UTF-8 filename: {:?}", path))?;
+            .ok_or_else(|| {
+                anyhow::anyhow!("Invalid UTF-8 filename: {:?}", path)
+            })?;
 
         result.push(name.to_owned());
     }

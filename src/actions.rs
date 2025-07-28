@@ -6,6 +6,7 @@ use crate::persistence::*;
 use crate::tmux_interface::*;
 
 use anyhow::{Context, Result};
+use regex::Regex;
 
 pub fn handle(args: Args) -> Result<()> {
     match args.command {
@@ -22,6 +23,8 @@ fn new(_session_name: &str) -> Result<()> {
 }
 
 fn save(session_name: &str) -> Result<()> {
+    validate_session_name(session_name)?;
+
     let mut current_session =
         get_session().context("Failed to get current session")?;
 
@@ -34,6 +37,14 @@ fn save(session_name: &str) -> Result<()> {
     save_session_config(session_name, yaml)
         .context("Failed to save yaml config to disk")?;
 
+    Ok(())
+}
+
+fn validate_session_name(name: &str) -> Result<()> {
+    let re: Regex = Regex::new(r"^[a-zA-Z0-9_-]+$").unwrap();
+    if !re.is_match(name) {
+        anyhow::bail!("Invalid session name. Only [a-zA-Z0-9_-] allowed");
+    }
     Ok(())
 }
 

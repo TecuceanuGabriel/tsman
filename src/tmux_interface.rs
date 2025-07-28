@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::fs::write;
 use std::process::Command;
 use std::thread::sleep;
@@ -63,7 +64,8 @@ pub fn restore_session(session: &Session) -> Result<()> {
 
         script_str += &format!(
             "tmux new-session -d -s {} -c {}\n",
-            session.name, session.work_dir
+            session.name,
+            escape(Cow::from(&session.work_dir))
         );
 
         let first_window = &session.windows[0];
