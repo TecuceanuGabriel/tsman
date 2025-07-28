@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::env;
 use std::fs::write;
 use std::process::Command;
 use std::thread::sleep;
@@ -93,17 +94,18 @@ pub fn restore_session(session: &Session) -> Result<()> {
         sleep(Duration::from_millis(ATTACH_DELAY));
     }
 
-    let output = Command::new("tmux")
-        .arg("display-message")
-        .args(["-t", &session.name])
-        .args(["-p", "#{session_attached}"])
-        .output()
-        .context("Failed to get current session")?;
+    let is_attached = match env::var("TMUX") {
+        Ok(s) => !s.is_empty(),
+        _ => false,
+    };
 
-    let output_str = String::from_utf8(output.stdout)?;
-    let is_session_attached = output_str.trim() == "1";
-
-    if !is_session_attached {
+    if is_attached {
+        Command::new("tmux")
+            .arg("switch-client")
+            .args(["-t", &session.name])
+            .status()
+            .context("Failed to attach session")?;
+    } else {
         Command::new("tmux")
             .arg("attach-session")
             .args(["-t", &session.name])

@@ -38,9 +38,7 @@ pub fn list_saved_sessions() -> Result<Vec<String>> {
             .file_stem()
             .ok_or_else(|| anyhow::anyhow!("Missing file stem for {:?}", path))?
             .to_str()
-            .ok_or_else(|| {
-                anyhow::anyhow!("Invalid UTF-8 filename: {:?}", path)
-            })?;
+            .ok_or_else(|| anyhow::anyhow!("Invalid UTF-8 filename: {:?}", path))?;
 
         result.push(name.to_owned());
     }
