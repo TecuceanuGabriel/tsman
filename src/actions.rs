@@ -11,16 +11,11 @@ use shell_escape::escape;
 
 pub fn handle(args: Args) -> Result<()> {
     match args.command {
-        Commands::New { session_name } => new(&session_name),
         Commands::Save { session_name } => save(&session_name),
         Commands::Open { session_name } => open(&session_name),
         Commands::Edit => edit(),
         Commands::Menu => menu(),
     }
-}
-
-fn new(_session_name: &str) -> Result<()> {
-    todo!();
 }
 
 fn save(session_name: &str) -> Result<()> {
