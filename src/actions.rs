@@ -7,13 +7,14 @@ use crate::tmux_interface::*;
 
 use anyhow::{Context, Result};
 use regex::Regex;
+use shell_escape::escape;
 
 pub fn handle(args: Args) -> Result<()> {
     match args.command {
         Commands::New { session_name } => new(&session_name),
         Commands::Save { session_name } => save(&session_name),
         Commands::Open { session_name } => open(&session_name),
-        Commands::Edit { session_name } => edit(&session_name),
+        Commands::Edit => edit(),
         Commands::Menu => menu(),
     }
 }
@@ -61,8 +62,17 @@ fn open(session_name: &str) -> Result<()> {
     Ok(())
 }
 
-fn edit(_session_name: &str) -> Result<()> {
-    todo!();
+fn edit() -> Result<()> {
+    let session_name = querry_sessions_with_fzf()?;
+    let path = get_config_file_path(&session_name)?;
+    let path_str = escape(path.as_os_str().to_string_lossy());
+
+    Command::new("sh")
+        .arg("-c")
+        .arg(format!("$EDITOR {}", path_str))
+        .status()?;
+
+    Ok(())
 }
 
 fn menu() -> Result<()> {

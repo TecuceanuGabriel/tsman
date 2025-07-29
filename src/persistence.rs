@@ -38,7 +38,9 @@ pub fn list_saved_sessions() -> Result<Vec<String>> {
             .file_stem()
             .ok_or_else(|| anyhow::anyhow!("Missing file stem for {:?}", path))?
             .to_str()
-            .ok_or_else(|| anyhow::anyhow!("Invalid UTF-8 filename: {:?}", path))?;
+            .ok_or_else(|| {
+                anyhow::anyhow!("Invalid UTF-8 filename: {:?}", path)
+            })?;
 
         result.push(name.to_owned());
     }
@@ -46,7 +48,7 @@ pub fn list_saved_sessions() -> Result<Vec<String>> {
     Ok(result)
 }
 
-fn get_config_file_path(file_name: &str) -> Result<PathBuf> {
+pub fn get_config_file_path(file_name: &str) -> Result<PathBuf> {
     let mut path = get_default_session_dir_path()?;
     path.push(format!("{}.yaml", file_name));
     Ok(path)
