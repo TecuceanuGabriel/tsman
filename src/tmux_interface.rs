@@ -75,8 +75,10 @@ pub fn restore_session(session: &Session) -> Result<()> {
 
         for window in session.windows.iter().skip(1) {
             script_str += &format!(
-                "tmux new-window -d -t {} -n {}\n",
-                session.name, window.name
+                "tmux new-window -d -t {} -n {} -c {}\n",
+                session.name,
+                window.name,
+                escape(Cow::from(&session.work_dir))
             );
 
             script_str += &get_window_config_cmd(session, &window)?;
@@ -263,25 +265,31 @@ fn get_window_config_cmd(session: &Session, window: &Window) -> Result<String> {
     let mut cmd = String::new();
 
     for _ in window.panes.iter().skip(1) {
-        cmd += &format!("tmux split-window -d -t {}\n", window_target);
+        cmd += &format!(
+            "tmux split-window -d -t {} -c {}\n",
+            window_target,
+            escape(Cow::from(&session.work_dir))
+        );
     }
 
     cmd += &format!(
-        "tmux select-layout -t {} \"{}\"\n",
-        window_target, window.layout
+        "tmux select-layout -t {} {}\n",
+        window_target,
+        escape(Cow::from(&window.layout))
     );
 
     for pane in &window.panes {
         let pane_target = format!("{}.{}", window_target, pane.index);
 
+        if pane.work_dir != session.work_dir {
+            cmd += &format!(
+                "tmux send-keys -t {} {} C-m\n",
+                pane_target,
+                escape(format!("cd {}", pane.work_dir).into()),
+            );
+        }
+
         if let Some(pane_cmd) = &pane.current_command {
-            if pane.work_dir != session.work_dir {
-                cmd += &format!(
-                    "tmux send-keys -t {} {} C-m\n",
-                    pane_target,
-                    escape(format!("cd {}", pane.work_dir).into()),
-                )
-            }
             cmd += &format!(
                 "tmux send-keys -t {} {} C-m\n",
                 pane_target,
