@@ -172,7 +172,8 @@ impl MenuUi {
 
     fn move_selection(&mut self, delta: i32) {
         if let Some(selected) = self.list_state.selected() {
-            let new_selected = (selected as i32 + delta).max(0) as usize;
+            let new_selected =
+                usize::try_from((selected as i32 + delta).max(0)).unwrap_or(0);
             self.list_state.select(Some(
                 new_selected.min(self.filtered_items.len().saturating_sub(1)),
             ));
