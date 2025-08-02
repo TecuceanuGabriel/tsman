@@ -58,7 +58,7 @@ impl MenuUi {
         self.selection
     }
 
-    fn draw(&self, frame: &mut Frame) {
+    fn draw(&mut self, frame: &mut Frame) {
         let chunks = ratatui::layout::Layout::default()
             .direction(ratatui::layout::Direction::Vertical)
             .constraints([
@@ -75,11 +75,7 @@ impl MenuUi {
                     .bg(ratatui::style::Color::Blue),
             );
 
-        frame.render_stateful_widget(
-            list,
-            chunks[0],
-            &mut self.list_state.clone(),
-        );
+        frame.render_stateful_widget(list, chunks[0], &mut self.list_state);
 
         let input_block =
             Block::default().borders(Borders::ALL).title("Search");
