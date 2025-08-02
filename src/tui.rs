@@ -1,4 +1,5 @@
 use std::{
+    fmt,
     io::{self},
     time::Duration,
 };
@@ -11,7 +12,7 @@ use crossterm::{
         enable_raw_mode,
     },
 };
-use fuzzy_matcher::FuzzyMatcher;
+use fuzzy_matcher::{FuzzyMatcher, skim::SkimMatcherV2};
 use ratatui::{
     DefaultTerminal, Frame, Terminal,
     prelude::CrosstermBackend,
@@ -20,14 +21,27 @@ use ratatui::{
 
 use anyhow::Result;
 
-#[derive(Debug)]
 pub struct MenuUi {
     all_items: Vec<String>,
     filtered_items: Vec<String>,
     input: String,
     list_state: ListState,
+    matcher: SkimMatcherV2,
     selection: Option<String>,
     exit: bool,
+}
+
+impl fmt::Debug for MenuUi {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("MenuUi")
+            .field("all_items", &self.all_items)
+            .field("filtered_items", &self.filtered_items)
+            .field("input", &self.input)
+            .field("list_state", &self.list_state)
+            .field("selection", &self.selection)
+            .field("exit", &self.exit)
+            .finish()
+    }
 }
 
 impl MenuUi {
@@ -40,6 +54,7 @@ impl MenuUi {
             filtered_items: items,
             input: String::new(),
             list_state,
+            matcher: fuzzy_matcher::skim::SkimMatcherV2::default(),
             selection: None,
             exit: false,
         }
@@ -135,15 +150,15 @@ impl MenuUi {
     }
 
     fn update_filter(&mut self) {
-        let matcher = fuzzy_matcher::skim::SkimMatcherV2::default();
-
         if self.input.is_empty() {
             self.filtered_items = self.all_items.clone();
         } else {
             self.filtered_items = self
                 .all_items
                 .iter()
-                .filter(|item| matcher.fuzzy_match(item, &self.input).is_some())
+                .filter(|item| {
+                    self.matcher.fuzzy_match(item, &self.input).is_some()
+                })
                 .cloned()
                 .collect();
         }
