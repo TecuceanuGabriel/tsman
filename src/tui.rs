@@ -52,11 +52,44 @@ impl MenuUi {
     }
 
     fn draw(&self, frame: &mut Frame) {
+        let chunks = ratatui::layout::Layout::default()
+            .direction(ratatui::layout::Direction::Vertical)
+            .constraints([
+                ratatui::layout::Constraint::Min(3),
+                ratatui::layout::Constraint::Length(3),
+            ])
+            .split(frame.area());
+
+        let items = self.filtered_items.iter().map(|s| s.as_str());
+        let list = List::new(items)
+            .block(Block::default().borders(Borders::ALL).title("Results"))
+            .highlight_style(
+                ratatui::style::Style::default()
+                    .bg(ratatui::style::Color::Blue),
+            );
+
+        frame.render_stateful_widget(
+            list,
+            chunks[0],
+            &mut self.list_state.clone(),
+        );
+
+        let input_block =
+            Block::default().borders(Borders::ALL).title("Search");
+        frame.render_widget(input_block, chunks[1]);
+
         let text = "> ".to_string() + &self.input;
         let input_text = ratatui::widgets::Paragraph::new(text).style(
-            ratatui::style::Style::default().fg(ratatui::style::Color::Yellow),
+            ratatui::style::Style::default().fg(ratatui::style::Color::Green),
         );
-        frame.render_widget(input_text, frame.area());
+
+        frame.render_widget(
+            input_text,
+            chunks[1].inner(ratatui::layout::Margin {
+                horizontal: 1,
+                vertical: 1,
+            }),
+        );
     }
 
     fn handle_events(&mut self) -> Result<()> {
