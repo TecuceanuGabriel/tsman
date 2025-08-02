@@ -117,6 +117,8 @@ impl MenuUi {
                 self.input.pop();
                 self.update_filter();
             }
+            KeyCode::Up => self.move_selection(-1),
+            KeyCode::Down => self.move_selection(1),
             KeyCode::Enter => {
                 // TODO: do something
                 self.exit = true;
@@ -144,6 +146,15 @@ impl MenuUi {
             self.list_state.select(None);
         } else {
             self.list_state.select(Some(0));
+        }
+    }
+
+    fn move_selection(&mut self, delta: i32) {
+        if let Some(selected) = self.list_state.selected() {
+            let new_selected = (selected as i32 + delta).max(0) as usize;
+            self.list_state.select(Some(
+                new_selected.min(self.filtered_items.len().saturating_sub(1)),
+            ));
         }
     }
 }
