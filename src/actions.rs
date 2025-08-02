@@ -1,3 +1,5 @@
+use std::process::Command;
+
 use crate::cli::{Args, Commands};
 use crate::persistence::*;
 use crate::tmux_interface::*;
@@ -5,6 +7,7 @@ use crate::tui::{self, MenuUi};
 
 use anyhow::{Context, Result};
 use regex::Regex;
+use shell_escape::escape;
 
 pub fn handle(args: Args) -> Result<()> {
     match args.command {
@@ -55,22 +58,35 @@ fn open(session_name: &str) -> Result<()> {
 }
 
 fn edit() -> Result<()> {
-    todo!()
+    if let Some(session_name) = querry_sessions()? {
+        let path = get_config_file_path(&session_name)?;
+        let path_str = escape(path.as_os_str().to_string_lossy());
+
+        Command::new("sh")
+            .arg("-c")
+            .arg(format!("$EDITOR {}", path_str))
+            .status()?;
+    }
+
+    Ok(())
 }
 
 fn menu() -> Result<()> {
+    if let Some(session_name) = querry_sessions()? {
+        open(&session_name)?;
+    }
+
+    Ok(())
+}
+
+fn querry_sessions() -> Result<Option<String>> {
     let mut terminal = tui::init()?;
 
-    let file_names = list_saved_sessions()?;
-    let mut menu_ui = MenuUi::new(file_names);
+    let session_names = list_saved_sessions()?;
+    let mut menu_ui = MenuUi::new(session_names);
     menu_ui.run(&mut terminal)?;
 
     tui::restore(terminal)?;
 
-    if let Some(file_name) = menu_ui.get_selected() {
-        println!("{}", file_name);
-        open(&file_name)?;
-    }
-
-    Ok(())
+    Ok(menu_ui.get_selected())
 }
