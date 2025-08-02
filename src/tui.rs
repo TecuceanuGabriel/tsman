@@ -5,7 +5,7 @@ use std::{
 };
 
 use crossterm::{
-    event::{self, Event, KeyCode, KeyEvent, KeyEventKind},
+    event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers},
     execute,
     terminal::{
         EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode,
@@ -25,9 +25,12 @@ pub struct MenuUi {
     all_items: Vec<String>,
     filtered_items: Vec<String>,
     input: String,
+
     list_state: ListState,
     matcher: SkimMatcherV2,
+
     selection: Option<String>,
+
     exit: bool,
 }
 
@@ -125,27 +128,36 @@ impl MenuUi {
             return;
         }
 
-        match key.code {
-            KeyCode::Char(c) => {
-                self.input.push(c);
-                self.update_filter();
+        if key.modifiers.contains(KeyModifiers::CONTROL) {
+            match key.code {
+                KeyCode::Char('p') => self.move_selection(-1),
+                KeyCode::Char('n') => self.move_selection(1),
+                KeyCode::Char('c') => self.exit = true,
+                _ => {}
             }
-            KeyCode::Backspace => {
-                self.input.pop();
-                self.update_filter();
-            }
-            KeyCode::Up => self.move_selection(-1),
-            KeyCode::Down => self.move_selection(1),
-            KeyCode::Enter => {
-                if let Some(selected) = self.list_state.selected() {
-                    if let Some(item) = self.filtered_items.get(selected) {
-                        self.selection = Some(item.to_string());
-                        self.exit = true;
+        } else {
+            match key.code {
+                KeyCode::Char(c) => {
+                    self.input.push(c);
+                    self.update_filter();
+                }
+                KeyCode::Backspace => {
+                    self.input.pop();
+                    self.update_filter();
+                }
+                KeyCode::Up => self.move_selection(-1),
+                KeyCode::Down => self.move_selection(1),
+                KeyCode::Enter => {
+                    if let Some(selected) = self.list_state.selected() {
+                        if let Some(item) = self.filtered_items.get(selected) {
+                            self.selection = Some(item.to_string());
+                            self.exit = true;
+                        }
                     }
                 }
+                KeyCode::Esc => self.exit = true,
+                _ => {}
             }
-            KeyCode::Esc => self.exit = true,
-            _ => {}
         }
     }
 
