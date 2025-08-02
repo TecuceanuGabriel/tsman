@@ -1,6 +1,3 @@
-use std::io::Write;
-use std::process::{Command, Stdio};
-
 use crate::cli::{Args, Commands};
 use crate::persistence::*;
 use crate::tmux_interface::*;
@@ -8,7 +5,6 @@ use crate::tui::{self, MenuUi};
 
 use anyhow::{Context, Result};
 use regex::Regex;
-use shell_escape::escape;
 
 pub fn handle(args: Args) -> Result<()> {
     match args.command {
@@ -70,6 +66,11 @@ fn menu() -> Result<()> {
     menu_ui.run(&mut terminal)?;
 
     tui::restore(terminal)?;
+
+    if let Some(file_name) = menu_ui.get_selected() {
+        println!("{}", file_name);
+        open(&file_name)?;
+    }
 
     Ok(())
 }

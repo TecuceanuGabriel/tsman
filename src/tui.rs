@@ -1,5 +1,5 @@
 use std::{
-    io::{self, Stdout},
+    io::{self},
     time::Duration,
 };
 
@@ -18,7 +18,7 @@ use ratatui::{
     widgets::{Block, Borders, List, ListState},
 };
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 
 #[derive(Debug)]
 pub struct MenuUi {
@@ -26,6 +26,7 @@ pub struct MenuUi {
     filtered_items: Vec<String>,
     input: String,
     list_state: ListState,
+    selection: Option<String>,
     exit: bool,
 }
 
@@ -39,6 +40,7 @@ impl MenuUi {
             filtered_items: items,
             input: String::new(),
             list_state,
+            selection: None,
             exit: false,
         }
     }
@@ -50,6 +52,10 @@ impl MenuUi {
         }
 
         Ok(())
+    }
+
+    pub fn get_selected(self) -> Option<String> {
+        self.selection
     }
 
     fn draw(&self, frame: &mut Frame) {
@@ -120,8 +126,12 @@ impl MenuUi {
             KeyCode::Up => self.move_selection(-1),
             KeyCode::Down => self.move_selection(1),
             KeyCode::Enter => {
-                // TODO: do something
-                self.exit = true;
+                if let Some(selected) = self.list_state.selected() {
+                    if let Some(item) = self.filtered_items.get(selected) {
+                        self.selection = Some(item.to_string());
+                        self.exit = true;
+                    }
+                }
             }
             KeyCode::Esc => self.exit = true,
             _ => {}
