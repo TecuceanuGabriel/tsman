@@ -11,6 +11,7 @@ use crossterm::{
         enable_raw_mode,
     },
 };
+use fuzzy_matcher::FuzzyMatcher;
 use ratatui::{
     DefaultTerminal, Frame, Terminal,
     prelude::CrosstermBackend,
@@ -110,9 +111,11 @@ impl MenuUi {
         match key.code {
             KeyCode::Char(c) => {
                 self.input.push(c);
+                self.update_filter();
             }
             KeyCode::Backspace => {
                 self.input.pop();
+                self.update_filter();
             }
             KeyCode::Enter => {
                 // TODO: do something
@@ -120,6 +123,27 @@ impl MenuUi {
             }
             KeyCode::Esc => self.exit = true,
             _ => {}
+        }
+    }
+
+    fn update_filter(&mut self) {
+        let matcher = fuzzy_matcher::skim::SkimMatcherV2::default();
+
+        if self.input.is_empty() {
+            self.filtered_items = self.all_items.clone();
+        } else {
+            self.filtered_items = self
+                .all_items
+                .iter()
+                .filter(|item| matcher.fuzzy_match(item, &self.input).is_some())
+                .cloned()
+                .collect();
+        }
+
+        if self.filtered_items.is_empty() {
+            self.list_state.select(None);
+        } else {
+            self.list_state.select(Some(0));
         }
     }
 }
