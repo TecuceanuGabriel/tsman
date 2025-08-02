@@ -12,6 +12,7 @@ anyhow = "1.0"
 clap = { version = "4.5.39", features = ["derive"] }
 crossterm = "0.29.0"
 dirs = "4.0"
+fuzzy-matcher = "0.3.7"
 ratatui = "0.29.0"
 regex = "1.11.1"
 serde = { version = "1.0", features = ["derive"] }
