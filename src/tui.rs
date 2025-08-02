@@ -4,7 +4,7 @@ use std::{
 };
 
 use crossterm::{
-    event::{self, Event, KeyCode, KeyEventKind},
+    event::{self, Event, KeyCode, KeyEvent, KeyEventKind},
     execute,
     terminal::{
         EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode,
@@ -29,6 +29,19 @@ pub struct MenuUi {
 }
 
 impl MenuUi {
+    pub fn new(items: Vec<String>) -> Self {
+        let mut list_state = ListState::default();
+        list_state.select(Some(0));
+
+        Self {
+            all_items: items.clone(),
+            filtered_items: items,
+            input: String::new(),
+            list_state,
+            exit: false,
+        }
+    }
+
     pub fn run(&mut self, terminal: &mut DefaultTerminal) -> Result<()> {
         while !self.exit {
             terminal.draw(|frame| self.draw(frame))?;
@@ -49,28 +62,31 @@ impl MenuUi {
     fn handle_events(&mut self) -> Result<()> {
         if event::poll(Duration::from_millis(50))? {
             if let Event::Key(key) = event::read()? {
-                if key.kind == KeyEventKind::Press {
-                    match key.code {
-                        KeyCode::Esc => self.exit = true,
-                        _ => {}
-                    }
-                }
+                self.handle_key_event(key);
             }
         }
 
         Ok(())
     }
 
-    pub fn new(items: Vec<String>) -> Self {
-        let mut list_state = ListState::default();
-        list_state.select(Some(0));
+    fn handle_key_event(&mut self, key: KeyEvent) {
+        if key.kind != KeyEventKind::Press {
+            return;
+        }
 
-        Self {
-            all_items: items.clone(),
-            filtered_items: items,
-            input: String::new(),
-            list_state,
-            exit: false,
+        match key.code {
+            KeyCode::Char(c) => {
+                self.input.push(c);
+            }
+            KeyCode::Backspace => {
+                self.input.pop();
+            }
+            KeyCode::Enter => {
+                // TODO: do something
+                self.exit = true;
+            }
+            KeyCode::Esc => self.exit = true,
+            _ => {}
         }
     }
 }
