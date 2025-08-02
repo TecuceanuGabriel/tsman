@@ -1,9 +1,9 @@
-use std::io::Write;
-use std::process::{Command, Stdio};
+use std::process::Command;
 
 use crate::cli::{Args, Commands};
 use crate::persistence::*;
 use crate::tmux_interface::*;
+use crate::tui::{self, MenuUi};
 
 use anyhow::{Context, Result};
 use regex::Regex;
@@ -58,38 +58,35 @@ fn open(session_name: &str) -> Result<()> {
 }
 
 fn edit() -> Result<()> {
-    let session_name = querry_sessions_with_fzf()?;
-    let path = get_config_file_path(&session_name)?;
-    let path_str = escape(path.as_os_str().to_string_lossy());
+    if let Some(session_name) = querry_sessions()? {
+        let path = get_config_file_path(&session_name)?;
+        let path_str = escape(path.as_os_str().to_string_lossy());
 
-    Command::new("sh")
-        .arg("-c")
-        .arg(format!("$EDITOR {}", path_str))
-        .status()?;
+        Command::new("sh")
+            .arg("-c")
+            .arg(format!("$EDITOR {}", path_str))
+            .status()?;
+    }
 
     Ok(())
 }
 
 fn menu() -> Result<()> {
-    open(&querry_sessions_with_fzf()?)?;
+    if let Some(session_name) = querry_sessions()? {
+        open(&session_name)?;
+    }
+
     Ok(())
 }
 
-fn querry_sessions_with_fzf() -> Result<String> {
-    let file_names = list_saved_sessions()?;
+fn querry_sessions() -> Result<Option<String>> {
+    let mut terminal = tui::init()?;
 
-    let mut child = Command::new("fzf")
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .spawn()
-        .expect("Failed to start fzf");
+    let session_names = list_saved_sessions()?;
+    let mut menu_ui = MenuUi::new(session_names);
+    menu_ui.run(&mut terminal)?;
 
-    let stdin = child.stdin.as_mut().expect("Failed to open stdin");
-    stdin
-        .write_all(file_names.join("\n").as_bytes())
-        .expect("Failed to write to stdin");
+    tui::restore(terminal)?;
 
-    let output = child.wait_with_output().expect("Failed to read output");
-
-    Ok(String::from_utf8(output.stdout)?.trim().to_string())
+    Ok(menu_ui.get_selected())
 }

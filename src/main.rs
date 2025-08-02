@@ -2,6 +2,7 @@ mod actions;
 mod cli;
 mod persistence;
 mod tmux_interface;
+mod tui;
 
 use anyhow::{Context, Result};
 use clap::Parser;
