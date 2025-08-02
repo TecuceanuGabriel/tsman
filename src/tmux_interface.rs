@@ -285,7 +285,7 @@ fn get_window_config_cmd(session: &Session, window: &Window) -> Result<String> {
             cmd += &format!(
                 "tmux send-keys -t {} {} C-m\n",
                 pane_target,
-                escape(format!("cd {}", pane.work_dir).into()),
+                escape(format!("cd {}; clear", pane.work_dir).into()),
             );
         }
 
