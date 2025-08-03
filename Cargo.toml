@@ -2,6 +2,12 @@
 name = "tsman"
 version = "0.2.0"
 edition = "2024"
+authors = ["Gabriel-Cristian Tecuceanu <tecuceanu.gabriel22@gmail.com>"]
+license = "MIT"
+description = "A lightweight tmux session manager with fuzzy-finding"
+repository = "https://github.com/TecuceanuGabriel/tsman"
+keywords = ["tmux", "session-manager", "tui", "fuzzy-finding", "productivity"]
+categories = ["command-line-utilities"]
 
 [[bin]]
 name = "tsman"
