@@ -61,28 +61,41 @@ pub fn restore_session(session: &Session) -> Result<()> {
         output_str.split(TMUX_LINE_SEPARATOR).collect::<Vec<&str>>();
 
     if !session_names.contains(&session.name.as_str()) {
+        let temp_session_name = format!("tsman-temp-{}", std::process::id());
+
         let mut script_str = String::new();
 
         script_str += &format!(
             "tmux new-session -d -s {} -c {}\n",
-            session.name,
+            temp_session_name,
             escape(Cow::from(&session.work_dir))
         );
 
         let first_window = &session.windows[0];
 
-        script_str += &get_window_config_cmd(&session, &first_window)?;
+        script_str += &get_window_config_cmd(
+            &temp_session_name,
+            &session,
+            &first_window,
+        )?;
 
         for window in session.windows.iter().skip(1) {
             script_str += &format!(
                 "tmux new-window -d -t {} -n {} -c {}\n",
-                session.name,
+                temp_session_name,
                 window.name,
                 escape(Cow::from(&session.work_dir))
             );
 
-            script_str += &get_window_config_cmd(session, &window)?;
+            script_str +=
+                &get_window_config_cmd(&temp_session_name, session, &window)?;
         }
+
+        // this helps avoid naming conflicts inside tmux
+        script_str += &format!(
+            "tmux rename-session -t {} {}\n",
+            temp_session_name, session.name
+        );
 
         let script = NamedTempFile::new()?;
 
@@ -96,24 +109,18 @@ pub fn restore_session(session: &Session) -> Result<()> {
         sleep(Duration::from_millis(ATTACH_DELAY));
     }
 
-    let is_attached = match env::var("TMUX") {
-        Ok(s) => !s.is_empty(),
-        _ => false,
+    let is_attached = env::var("TMUX").is_ok();
+    let attach_cmd = if is_attached {
+        "switch-client"
+    } else {
+        "attach-session"
     };
 
-    if is_attached {
-        Command::new("tmux")
-            .arg("switch-client")
-            .args(["-t", &session.name])
-            .status()
-            .context("Failed to attach session")?;
-    } else {
-        Command::new("tmux")
-            .arg("attach-session")
-            .args(["-t", &session.name])
-            .status()
-            .context("Failed to attach session")?;
-    }
+    Command::new("tmux")
+        .arg(attach_cmd)
+        .args(["-t", &session.name])
+        .status()
+        .context("Failed to attach session")?;
 
     Ok(())
 }
@@ -259,8 +266,12 @@ fn get_process_children(shell_pid: &str) -> Result<Vec<(u32, String)>> {
     Ok(children)
 }
 
-fn get_window_config_cmd(session: &Session, window: &Window) -> Result<String> {
-    let window_target = format!("{}:{}", session.name, window.index);
+fn get_window_config_cmd(
+    temp_session_name: &str,
+    session: &Session,
+    window: &Window,
+) -> Result<String> {
+    let window_target = format!("{}:{}", temp_session_name, window.index);
 
     let mut cmd = String::new();
 
@@ -285,7 +296,10 @@ fn get_window_config_cmd(session: &Session, window: &Window) -> Result<String> {
             cmd += &format!(
                 "tmux send-keys -t {} {} C-m\n",
                 pane_target,
-                escape(format!("cd {}; clear", pane.work_dir).into()),
+                escape(
+                    format!("cd {}; clear", escape(Cow::from(&pane.work_dir)))
+                        .into()
+                ),
             );
         }
 
