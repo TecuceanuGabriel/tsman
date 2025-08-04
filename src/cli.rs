@@ -11,8 +11,7 @@ pub struct Args {
 #[derive(Debug, Subcommand)]
 pub enum Commands {
     /// save the current session
-    #[command(arg_required_else_help = true)]
-    Save { session_name: String },
+    Save { session_name: Option<String> },
 
     /// open the selected session
     #[command(arg_required_else_help = true)]

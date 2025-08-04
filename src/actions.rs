@@ -11,26 +11,27 @@ use shell_escape::escape;
 
 pub fn handle(args: Args) -> Result<()> {
     match args.command {
-        Commands::Save { session_name } => save(&session_name),
+        Commands::Save { session_name } => save(session_name.as_deref()),
         Commands::Open { session_name } => open(&session_name),
         Commands::Edit => edit(),
         Commands::Menu => menu(),
     }
 }
 
-fn save(session_name: &str) -> Result<()> {
-    validate_session_name(session_name)?;
-
+fn save(session_name: Option<&str>) -> Result<()> {
     let mut current_session =
         get_session().context("Failed to get current session")?;
 
-    current_session.name = session_name.to_string();
+    if let Some(name) = session_name {
+        validate_session_name(name)?;
+        current_session.name = name.to_string();
+    }
 
     let yaml = serde_yaml::to_string(&current_session).with_context(|| {
         format!("Failed to serialize session {:#?} to yaml", current_session)
     })?;
 
-    save_session_config(session_name, yaml)
+    save_session_config(&current_session.name, yaml)
         .context("Failed to save yaml config to disk")?;
 
     Ok(())
