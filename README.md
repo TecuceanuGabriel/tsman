@@ -57,6 +57,14 @@ bind -r f run-shell "tmux neww 'tsman menu'"
 alias mux-fd="tsman menu"
 ```
 
+If you want to set up a custom location to store session config files set the
+`TSMAN_CONFIG_STORAGE_DIR` env variable. You can add the following line to
+your shell config file to make it persistent:
+
+```bash
+export TSMAN_CONFIG_STORAGE_DIR="$HOME/mux-sessions"
+```
+
 ## Notes
 
 - `$EDITOR` must be set to use the edit command.
