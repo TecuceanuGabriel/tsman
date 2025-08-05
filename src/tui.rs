@@ -21,7 +21,7 @@ use ratatui::{
 
 use anyhow::Result;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum MenuAction {
     Open,
     Edit,
@@ -146,6 +146,12 @@ impl MenuUi {
             match key.code {
                 KeyCode::Char('p') => self.move_selection(-1),
                 KeyCode::Char('n') => self.move_selection(1),
+                KeyCode::Char('e') => self.set_pending_action(MenuAction::Edit),
+                KeyCode::Char('d') => {
+                    self.set_pending_action(MenuAction::Delete);
+                    self.move_selection(-1);
+                    self.filtered_items = self.all_items.clone();
+                }
                 KeyCode::Char('c') => self.exit = true,
                 _ => {}
             }
@@ -171,9 +177,14 @@ impl MenuUi {
     fn set_pending_action(&mut self, action: MenuAction) {
         if let Some(selected) = self.list_state.selected() {
             if let Some(item) = self.filtered_items.get(selected) {
+                if action == MenuAction::Delete {
+                    self.all_items.remove(selected);
+                } else {
+                    self.exit = true;
+                }
+
                 self.selection = Some(item.to_string());
                 self.action = Some(action);
-                self.exit = true;
             }
         }
     }
