@@ -21,6 +21,13 @@ use ratatui::{
 
 use anyhow::Result;
 
+#[derive(Debug)]
+pub enum MenuAction {
+    Open,
+    Edit,
+    Delete,
+}
+
 pub struct MenuUi {
     all_items: Vec<String>,
     filtered_items: Vec<String>,
@@ -30,6 +37,7 @@ pub struct MenuUi {
     matcher: SkimMatcherV2,
 
     selection: Option<String>,
+    action: Option<MenuAction>,
 
     exit: bool,
 }
@@ -42,6 +50,7 @@ impl fmt::Debug for MenuUi {
             .field("input", &self.input)
             .field("list_state", &self.list_state)
             .field("selection", &self.selection)
+            .field("action", &self.action)
             .field("exit", &self.exit)
             .finish()
     }
@@ -59,6 +68,7 @@ impl MenuUi {
             list_state,
             matcher: fuzzy_matcher::skim::SkimMatcherV2::default(),
             selection: None,
+            action: None,
             exit: false,
         }
     }
@@ -147,16 +157,19 @@ impl MenuUi {
                 }
                 KeyCode::Up => self.move_selection(-1),
                 KeyCode::Down => self.move_selection(1),
-                KeyCode::Enter => {
-                    if let Some(selected) = self.list_state.selected() {
-                        if let Some(item) = self.filtered_items.get(selected) {
-                            self.selection = Some(item.to_string());
-                            self.exit = true;
-                        }
-                    }
-                }
+                KeyCode::Enter => self.set_pending_action(MenuAction::Open),
                 KeyCode::Esc => self.exit = true,
                 _ => {}
+            }
+        }
+    }
+
+    fn set_pending_action(&mut self, action: MenuAction) {
+        if let Some(selected) = self.list_state.selected() {
+            if let Some(item) = self.filtered_items.get(selected) {
+                self.selection = Some(item.to_string());
+                self.action = Some(action);
+                self.exit = true;
             }
         }
     }
