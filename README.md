@@ -14,30 +14,41 @@ cargo install tsman
 ### Save current session
 
 ```bash
-tsman save <session_name>
+tsman save <session_name> # uses the specified name
+tsman save # uses the current name of the session
 ```
 
-### Open a specified session
+### Open a session
 
 ```bash
 tsman open <session_name>
-tsman menu # fuzzy-find menu
 ```
 
-### Edit a selected sessions config file
+### Edit a session config file
+
+The file is opened for editing in `$EDITOR`.
 
 ```bash
-tsman edit # Opens session config file in `$EDITOR`
+tsman edit <session_name> # edit the config file of the specified session
+tsman edit # edit the config file of the current session
+```
+
+### Delete a session config file
+
+```bash
+tsman delete <session_name>
 ```
 
 ## Menu keybindings:
 
-| command              | action                |
-| -------------------- | --------------------- |
-| `Esc` / `C-c`        | Exit menu             |
-| `Up arrow` / `C-p`   | Select previous item  |
-| `Down arrow` / `C-n` | Select next item      |
-| `Enter`              | Open selected session |
+| command              | action                                 |
+| -------------------- | -------------------------------------- |
+| `Esc` / `C-c`        | Exit menu                              |
+| `Up arrow` / `C-p`   | Select previous item                   |
+| `Down arrow` / `C-n` | Select next item                       |
+| `C-e`                | Edit config file of selected session   |
+| `C-d`                | Delete config file of selected session |
+| `Enter`              | Open selected session                  |
 
 ## Configuration
 
@@ -49,6 +60,7 @@ Example config:
 
 ```bash
 bind -r f run-shell "tmux neww 'tsman menu'"
+bind -r C-s run-shell "tsman save"
 ```
 
 `~/.zshrc`:
