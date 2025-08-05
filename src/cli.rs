@@ -18,7 +18,8 @@ pub enum Commands {
     Open { session_name: String },
 
     /// open the config file of the selected session in $EDITOR
-    Edit,
+    #[command(arg_required_else_help = true)]
+    Edit { session_name: String },
 
     /// delete the config file of the selected session
     #[command(arg_required_else_help = true)]

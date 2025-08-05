@@ -14,7 +14,7 @@ pub fn handle(args: Args) -> Result<()> {
     match args.command {
         Commands::Save { session_name } => save(session_name.as_deref()),
         Commands::Open { session_name } => open(&session_name),
-        Commands::Edit => edit(),
+        Commands::Edit { session_name } => edit(&session_name),
         Commands::Delete { session_name } => delete(&session_name),
         Commands::Menu => menu(),
     }
@@ -60,16 +60,14 @@ fn open(session_name: &str) -> Result<()> {
     Ok(())
 }
 
-fn edit() -> Result<()> {
-    if let Some(session_name) = querry_sessions()? {
-        let path = get_config_file_path(&session_name)?;
-        let path_str = escape(path.as_os_str().to_string_lossy());
+fn edit(session_name: &str) -> Result<()> {
+    let path = get_config_file_path(&session_name)?;
+    let path_str = escape(path.as_os_str().to_string_lossy());
 
-        Command::new("sh")
-            .arg("-c")
-            .arg(format!("$EDITOR {}", path_str))
-            .status()?;
-    }
+    Command::new("sh")
+        .arg("-c")
+        .arg(format!("$EDITOR {}", path_str))
+        .status()?;
 
     Ok(())
 }
