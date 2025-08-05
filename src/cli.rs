@@ -20,6 +20,10 @@ pub enum Commands {
     /// open the config file of the selected session in $EDITOR
     Edit,
 
+    /// delete the config file of the selected session
+    #[command(arg_required_else_help = true)]
+    Delete { session_name: String },
+
     /// display menu containing all sessions
     Menu,
 }

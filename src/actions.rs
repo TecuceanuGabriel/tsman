@@ -1,3 +1,4 @@
+use std::fs;
 use std::process::Command;
 
 use crate::cli::{Args, Commands};
@@ -14,6 +15,7 @@ pub fn handle(args: Args) -> Result<()> {
         Commands::Save { session_name } => save(session_name.as_deref()),
         Commands::Open { session_name } => open(&session_name),
         Commands::Edit => edit(),
+        Commands::Delete { session_name } => delete(&session_name),
         Commands::Menu => menu(),
     }
 }
@@ -69,6 +71,12 @@ fn edit() -> Result<()> {
             .status()?;
     }
 
+    Ok(())
+}
+
+fn delete(session_name: &str) -> Result<()> {
+    let path = get_config_file_path(&session_name)?;
+    fs::remove_file(path)?;
     Ok(())
 }
 
