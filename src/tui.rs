@@ -21,7 +21,7 @@ use ratatui::{
 
 use anyhow::Result;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum MenuAction {
     Open,
     Edit,
@@ -82,8 +82,12 @@ impl MenuUi {
         Ok(())
     }
 
-    pub fn get_selected(self) -> Option<String> {
-        self.selection
+    pub fn get_selection(&self) -> Option<String> {
+        self.selection.clone()
+    }
+
+    pub fn get_action(&self) -> Option<MenuAction> {
+        self.action.clone()
     }
 
     fn draw(&mut self, frame: &mut Frame) {

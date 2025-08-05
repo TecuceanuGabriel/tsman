@@ -4,7 +4,7 @@ use std::process::Command;
 use crate::cli::{Args, Commands};
 use crate::persistence::*;
 use crate::tmux_interface::*;
-use crate::tui::{self, MenuUi};
+use crate::tui::{self, MenuAction, MenuUi};
 
 use anyhow::{Context, Result};
 use regex::Regex;
@@ -79,14 +79,6 @@ fn delete(session_name: &str) -> Result<()> {
 }
 
 fn menu() -> Result<()> {
-    if let Some(session_name) = querry_sessions()? {
-        open(&session_name)?;
-    }
-
-    Ok(())
-}
-
-fn querry_sessions() -> Result<Option<String>> {
     let mut terminal = tui::init()?;
 
     let session_names = list_saved_sessions()?;
@@ -95,5 +87,15 @@ fn querry_sessions() -> Result<Option<String>> {
 
     tui::restore(terminal)?;
 
-    Ok(menu_ui.get_selected())
+    if let Some(session_name) = menu_ui.get_selection() {
+        if let Some(action) = menu_ui.get_action() {
+            match action {
+                MenuAction::Open => open(&session_name)?,
+                MenuAction::Edit => edit(&session_name)?,
+                MenuAction::Delete => delete(&session_name)?,
+            }
+        }
+    }
+
+    Ok(())
 }
