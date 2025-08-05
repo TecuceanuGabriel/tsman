@@ -14,7 +14,7 @@ pub fn handle(args: Args) -> Result<()> {
     match args.command {
         Commands::Save { session_name } => save(session_name.as_deref()),
         Commands::Open { session_name } => open(&session_name),
-        Commands::Edit { session_name } => edit(&session_name),
+        Commands::Edit { session_name } => edit(session_name.as_deref()),
         Commands::Delete { session_name } => delete(&session_name),
         Commands::Menu => menu(),
     }
@@ -60,8 +60,14 @@ fn open(session_name: &str) -> Result<()> {
     Ok(())
 }
 
-fn edit(session_name: &str) -> Result<()> {
-    let path = get_config_file_path(&session_name)?;
+fn edit(session_name: Option<&str>) -> Result<()> {
+    let path = if let Some(name) = session_name {
+        get_config_file_path(name)?
+    } else {
+        let (name, _) = get_session_info()?;
+        get_config_file_path(&name)?
+    };
+
     let path_str = escape(path.as_os_str().to_string_lossy());
 
     Command::new("sh")
@@ -91,7 +97,7 @@ fn menu() -> Result<()> {
         if let Some(action) = menu_ui.get_action() {
             match action {
                 MenuAction::Open => open(&session_name)?,
-                MenuAction::Edit => edit(&session_name)?,
+                MenuAction::Edit => edit(Some(&session_name))?,
                 MenuAction::Delete => delete(&session_name)?,
             }
         }

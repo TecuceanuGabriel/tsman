@@ -125,7 +125,7 @@ pub fn restore_session(session: &Session) -> Result<()> {
     Ok(())
 }
 
-fn get_session_info() -> Result<(String, String)> {
+pub fn get_session_info() -> Result<(String, String)> {
     let output = Command::new("tmux")
         .arg("display-message")
         .arg("-p")
