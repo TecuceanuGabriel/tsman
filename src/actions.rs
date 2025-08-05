@@ -93,13 +93,11 @@ fn menu() -> Result<()> {
 
     tui::restore(terminal)?;
 
-    if let Some(session_name) = menu_ui.get_selection() {
-        if let Some(action) = menu_ui.get_action() {
-            match action {
-                MenuAction::Open => open(&session_name)?,
-                MenuAction::Edit => edit(Some(&session_name))?,
-                MenuAction::Delete => delete(&session_name)?,
-            }
+    while let Some(item) = menu_ui.dequeue_action()? {
+        match item.action {
+            MenuAction::Open => open(&item.selection)?,
+            MenuAction::Edit => edit(Some(&item.selection))?,
+            MenuAction::Delete => delete(&item.selection)?,
         }
     }
 

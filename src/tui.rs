@@ -1,4 +1,5 @@
 use std::{
+    collections::VecDeque,
     fmt,
     io::{self},
     time::Duration,
@@ -28,6 +29,12 @@ pub enum MenuAction {
     Delete,
 }
 
+#[derive(Debug)]
+pub struct MenuActionItem {
+    pub selection: String,
+    pub action: MenuAction,
+}
+
 pub struct MenuUi {
     all_items: Vec<String>,
     filtered_items: Vec<String>,
@@ -36,8 +43,7 @@ pub struct MenuUi {
     list_state: ListState,
     matcher: SkimMatcherV2,
 
-    selection: Option<String>,
-    action: Option<MenuAction>,
+    action_queue: VecDeque<MenuActionItem>,
 
     exit: bool,
 }
@@ -49,8 +55,7 @@ impl fmt::Debug for MenuUi {
             .field("filtered_items", &self.filtered_items)
             .field("input", &self.input)
             .field("list_state", &self.list_state)
-            .field("selection", &self.selection)
-            .field("action", &self.action)
+            .field("action_queue", &self.action_queue)
             .field("exit", &self.exit)
             .finish()
     }
@@ -67,8 +72,7 @@ impl MenuUi {
             input: String::new(),
             list_state,
             matcher: fuzzy_matcher::skim::SkimMatcherV2::default(),
-            selection: None,
-            action: None,
+            action_queue: VecDeque::new(),
             exit: false,
         }
     }
@@ -82,12 +86,8 @@ impl MenuUi {
         Ok(())
     }
 
-    pub fn get_selection(&self) -> Option<String> {
-        self.selection.clone()
-    }
-
-    pub fn get_action(&self) -> Option<MenuAction> {
-        self.action.clone()
+    pub fn dequeue_action(&mut self) -> Result<Option<MenuActionItem>> {
+        Ok(self.action_queue.pop_front())
     }
 
     fn draw(&mut self, frame: &mut Frame) {
@@ -146,11 +146,22 @@ impl MenuUi {
             match key.code {
                 KeyCode::Char('p') => self.move_selection(-1),
                 KeyCode::Char('n') => self.move_selection(1),
-                KeyCode::Char('e') => self.set_pending_action(MenuAction::Edit),
+                KeyCode::Char('e') => self.enqueue_action(MenuAction::Edit),
                 KeyCode::Char('d') => {
-                    self.set_pending_action(MenuAction::Delete);
-                    self.move_selection(-1);
-                    self.filtered_items = self.all_items.clone();
+                    if let Some(selection_idx) = self.list_state.selected() {
+                        let selection =
+                            match self.filtered_items.get(selection_idx) {
+                                Some(s) => s.clone(),
+                                None => return,
+                            };
+
+                        self.enqueue_action(MenuAction::Delete);
+
+                        self.all_items.retain(|s| s != &selection);
+                        self.update_filter();
+                        self.list_state
+                            .select(Some(selection_idx.saturating_sub(1)));
+                    }
                 }
                 KeyCode::Char('c') => self.exit = true,
                 _ => {}
@@ -159,34 +170,39 @@ impl MenuUi {
             match key.code {
                 KeyCode::Char(c) => {
                     self.input.push(c);
-                    self.update_filter();
+                    self.update_filter_and_reset();
                 }
                 KeyCode::Backspace => {
                     self.input.pop();
-                    self.update_filter();
+                    self.update_filter_and_reset();
                 }
                 KeyCode::Up => self.move_selection(-1),
                 KeyCode::Down => self.move_selection(1),
-                KeyCode::Enter => self.set_pending_action(MenuAction::Open),
+                KeyCode::Enter => self.enqueue_action(MenuAction::Open),
                 KeyCode::Esc => self.exit = true,
                 _ => {}
             }
         }
     }
 
-    fn set_pending_action(&mut self, action: MenuAction) {
-        if let Some(selected) = self.list_state.selected() {
-            if let Some(item) = self.filtered_items.get(selected) {
-                if action == MenuAction::Delete {
-                    self.all_items.remove(selected);
-                } else {
+    fn enqueue_action(&mut self, action: MenuAction) {
+        if let Some(selection_idx) = self.list_state.selected() {
+            if let Some(selection) = self.filtered_items.get(selection_idx) {
+                if action != MenuAction::Delete {
                     self.exit = true;
                 }
 
-                self.selection = Some(item.to_string());
-                self.action = Some(action);
+                self.action_queue.push_back(MenuActionItem {
+                    selection: selection.to_string(),
+                    action,
+                });
             }
         }
+    }
+
+    fn update_filter_and_reset(&mut self) {
+        self.update_filter();
+        self.reset_position();
     }
 
     fn update_filter(&mut self) {
@@ -202,7 +218,9 @@ impl MenuUi {
                 .cloned()
                 .collect();
         }
+    }
 
+    fn reset_position(&mut self) {
         if self.filtered_items.is_empty() {
             self.list_state.select(None);
         } else {
@@ -211,9 +229,10 @@ impl MenuUi {
     }
 
     fn move_selection(&mut self, delta: i32) {
-        if let Some(selected) = self.list_state.selected() {
+        if let Some(selection_idx) = self.list_state.selected() {
             let new_selected =
-                usize::try_from((selected as i32 + delta).max(0)).unwrap_or(0);
+                usize::try_from((selection_idx as i32 + delta).max(0))
+                    .unwrap_or(0);
             self.list_state.select(Some(
                 new_selected.min(self.filtered_items.len().saturating_sub(1)),
             ));
