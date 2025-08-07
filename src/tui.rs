@@ -71,7 +71,7 @@ impl fmt::Debug for MenuUi {
 }
 
 impl MenuUi {
-    pub fn new(items: Vec<String>) -> Self {
+    pub fn new(items: Vec<String>, show_preview: bool) -> Self {
         let mut list_state = ListState::default();
         list_state.select(Some(0));
 
@@ -82,7 +82,7 @@ impl MenuUi {
             list_state,
             matcher: fuzzy_matcher::skim::SkimMatcherV2::default(),
             action_queue: VecDeque::new(),
-            show_preview: true,
+            show_preview,
             exit: false,
         }
     }

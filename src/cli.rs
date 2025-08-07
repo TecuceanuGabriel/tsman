@@ -25,5 +25,8 @@ pub enum Commands {
     Delete { session_name: String },
 
     /// display menu containing all sessions
-    Menu,
+    Menu {
+        #[clap(long, short, help = "Show preview pane on start up")]
+        preview: bool,
+    },
 }
