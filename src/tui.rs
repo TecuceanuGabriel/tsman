@@ -25,6 +25,8 @@ use ratatui::{
 
 use anyhow::Result;
 
+use crate::{persistence::load_session_from_config, tmux_interface::Session};
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum MenuAction {
     Open,
@@ -153,11 +155,25 @@ impl MenuUi {
             let preview_block =
                 Block::default().borders(Borders::ALL).title("Preview");
 
-            let preview_content = "test";
+            let preview_content = self.generate_preview_content();
             let preview = Paragraph::new(preview_content).block(preview_block);
 
             frame.render_widget(preview, chunks[1]);
         }
+    }
+
+    fn generate_preview_content(&self) -> String {
+        if let Some(selection_idx) = self.list_state.selected() {
+            if let Some(selection) = self.filtered_items.get(selection_idx) {
+                if let Ok(session_str) = load_session_from_config(selection) {
+                    let session: Session =
+                        serde_yaml::from_str(&session_str).ok().unwrap();
+                    return session.get_preview();
+                }
+            }
+        }
+
+        "".to_string()
     }
 
     fn handle_events(&mut self) -> Result<()> {
