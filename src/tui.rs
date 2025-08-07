@@ -25,7 +25,8 @@ use ratatui::{
 
 use anyhow::Result;
 
-use crate::{persistence::load_session_from_config, tmux_interface::Session};
+use crate::persistence::load_session_from_config;
+use crate::tmux::session::Session;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum MenuAction {

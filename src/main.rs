@@ -1,7 +1,7 @@
 mod actions;
 mod cli;
 mod persistence;
-mod tmux_interface;
+mod tmux;
 mod tui;
 
 use anyhow::{Context, Result};

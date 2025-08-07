@@ -3,7 +3,8 @@ use std::process::Command;
 
 use crate::cli::{Args, Commands};
 use crate::persistence::*;
-use crate::tmux_interface::*;
+use crate::tmux::interface::*;
+use crate::tmux::session::Session;
 use crate::tui::{self, MenuAction, MenuUi};
 
 use anyhow::{Context, Result};
