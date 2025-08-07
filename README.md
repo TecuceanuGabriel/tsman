@@ -39,16 +39,24 @@ tsman edit # edit the config file of the current session
 tsman delete <session_name>
 ```
 
-## Menu keybindings:
+### Open a menu that contains all saved sessions
 
-| command              | action                                 |
-| -------------------- | -------------------------------------- |
-| `Esc` / `C-c`        | Exit menu                              |
-| `Up arrow` / `C-p`   | Select previous item                   |
-| `Down arrow` / `C-n` | Select next item                       |
-| `C-e`                | Edit config file of selected session   |
-| `C-d`                | Delete config file of selected session |
-| `Enter`              | Open selected session                  |
+```bash
+tsman menu
+tsman menu -p # open the menu with the preview pane on
+```
+
+#### Menu keybindings:
+
+| command              | action                                    |
+| -------------------- | ----------------------------------------- |
+| `Esc` / `C-c`        | Exit menu                                 |
+| `Up arrow` / `C-p`   | Select previous item                      |
+| `Down arrow` / `C-n` | Select next item                          |
+| `C-e`                | Edit config file of selected session      |
+| `C-d`                | Delete config file of selected session    |
+| `C-t`                | Toggle the visibility of the preview pane |
+| `Enter`              | Open selected session                     |
 
 ## Configuration
 
@@ -59,14 +67,14 @@ Example config:
 `~/.tmux.conf`:
 
 ```bash
-bind -r f run-shell "tmux neww 'tsman menu'"
+bind -r f run-shell "tmux neww 'tsman menu -p'"
 bind -r C-s run-shell "tsman save"
 ```
 
 `~/.zshrc`:
 
 ```bash
-alias mux-fd="tsman menu"
+alias mux-fd="tsman menu -p"
 ```
 
 If you want to set up a custom location to store session config files set the
