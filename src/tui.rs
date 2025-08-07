@@ -48,6 +48,8 @@ pub struct MenuUi {
 
     action_queue: VecDeque<MenuActionItem>,
 
+    show_preview: bool,
+
     exit: bool,
 }
 
@@ -59,6 +61,7 @@ impl fmt::Debug for MenuUi {
             .field("input", &self.input)
             .field("list_state", &self.list_state)
             .field("action_queue", &self.action_queue)
+            .field("show_preview", &self.show_preview)
             .field("exit", &self.exit)
             .finish()
     }
@@ -76,6 +79,7 @@ impl MenuUi {
             list_state,
             matcher: fuzzy_matcher::skim::SkimMatcherV2::default(),
             action_queue: VecDeque::new(),
+            show_preview: true,
             exit: false,
         }
     }
@@ -94,13 +98,20 @@ impl MenuUi {
     }
 
     fn draw(&mut self, frame: &mut Frame) {
-        let chunks = Layout::default()
-            .direction(Direction::Horizontal)
-            .constraints([
-                Constraint::Percentage(60),
-                Constraint::Percentage(40),
-            ])
-            .split(frame.area());
+        let chunks = if self.show_preview {
+            Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints([
+                    Constraint::Percentage(60),
+                    Constraint::Percentage(40),
+                ])
+                .split(frame.area())
+        } else {
+            Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints([Constraint::Percentage(100)])
+                .split(frame.area())
+        };
 
         let left_chunks = Layout::default()
             .direction(Direction::Vertical)
@@ -137,13 +148,16 @@ impl MenuUi {
                 vertical: 1,
             }),
         );
-        let preview_block =
-            Block::default().borders(Borders::ALL).title("Preview");
 
-        let preview_content = "test";
-        let preview = Paragraph::new(preview_content).block(preview_block);
+        if self.show_preview {
+            let preview_block =
+                Block::default().borders(Borders::ALL).title("Preview");
 
-        frame.render_widget(preview, chunks[1]);
+            let preview_content = "test";
+            let preview = Paragraph::new(preview_content).block(preview_block);
+
+            frame.render_widget(preview, chunks[1]);
+        }
     }
 
     fn handle_events(&mut self) -> Result<()> {
@@ -183,6 +197,7 @@ impl MenuUi {
                     }
                 }
                 KeyCode::Char('c') => self.exit = true,
+                KeyCode::Char('t') => self.show_preview = !self.show_preview,
                 _ => {}
             }
         } else {
