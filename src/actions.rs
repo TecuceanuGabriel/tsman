@@ -3,7 +3,8 @@ use std::process::Command;
 
 use crate::cli::{Args, Commands};
 use crate::persistence::*;
-use crate::tmux_interface::*;
+use crate::tmux::interface::*;
+use crate::tmux::session::Session;
 use crate::tui::{self, MenuAction, MenuUi};
 
 use anyhow::{Context, Result};
@@ -16,7 +17,7 @@ pub fn handle(args: Args) -> Result<()> {
         Commands::Open { session_name } => open(&session_name),
         Commands::Edit { session_name } => edit(session_name.as_deref()),
         Commands::Delete { session_name } => delete(&session_name),
-        Commands::Menu => menu(),
+        Commands::Menu { preview } => menu(preview),
     }
 }
 
@@ -84,11 +85,11 @@ fn delete(session_name: &str) -> Result<()> {
     Ok(())
 }
 
-fn menu() -> Result<()> {
+fn menu(show_preview: bool) -> Result<()> {
     let mut terminal = tui::init()?;
 
     let session_names = list_saved_sessions()?;
-    let mut menu_ui = MenuUi::new(session_names);
+    let mut menu_ui = MenuUi::new(session_names, show_preview);
     menu_ui.run(&mut terminal)?;
 
     tui::restore(terminal)?;

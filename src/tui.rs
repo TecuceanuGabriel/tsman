@@ -13,14 +13,20 @@ use crossterm::{
         enable_raw_mode,
     },
 };
+
 use fuzzy_matcher::{FuzzyMatcher, skim::SkimMatcherV2};
+
 use ratatui::{
     DefaultTerminal, Frame, Terminal,
+    layout::{Constraint, Direction, Layout},
     prelude::CrosstermBackend,
-    widgets::{Block, Borders, List, ListState},
+    widgets::{Block, Borders, List, ListState, Paragraph},
 };
 
 use anyhow::Result;
+
+use crate::persistence::load_session_from_config;
+use crate::tmux::session::Session;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum MenuAction {
@@ -45,6 +51,8 @@ pub struct MenuUi {
 
     action_queue: VecDeque<MenuActionItem>,
 
+    show_preview: bool,
+
     exit: bool,
 }
 
@@ -56,13 +64,14 @@ impl fmt::Debug for MenuUi {
             .field("input", &self.input)
             .field("list_state", &self.list_state)
             .field("action_queue", &self.action_queue)
+            .field("show_preview", &self.show_preview)
             .field("exit", &self.exit)
             .finish()
     }
 }
 
 impl MenuUi {
-    pub fn new(items: Vec<String>) -> Self {
+    pub fn new(items: Vec<String>, show_preview: bool) -> Self {
         let mut list_state = ListState::default();
         list_state.select(Some(0));
 
@@ -73,6 +82,7 @@ impl MenuUi {
             list_state,
             matcher: fuzzy_matcher::skim::SkimMatcherV2::default(),
             action_queue: VecDeque::new(),
+            show_preview,
             exit: false,
         }
     }
@@ -91,13 +101,25 @@ impl MenuUi {
     }
 
     fn draw(&mut self, frame: &mut Frame) {
-        let chunks = ratatui::layout::Layout::default()
-            .direction(ratatui::layout::Direction::Vertical)
-            .constraints([
-                ratatui::layout::Constraint::Min(3),
-                ratatui::layout::Constraint::Length(3),
-            ])
-            .split(frame.area());
+        let chunks = if self.show_preview {
+            Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints([
+                    Constraint::Percentage(60),
+                    Constraint::Percentage(40),
+                ])
+                .split(frame.area())
+        } else {
+            Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints([Constraint::Percentage(100)])
+                .split(frame.area())
+        };
+
+        let left_chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Min(3), Constraint::Length(3)])
+            .split(chunks[0]);
 
         let items = self.filtered_items.iter().map(|s| s.as_str());
         let list = List::new(items)
@@ -107,11 +129,15 @@ impl MenuUi {
                     .bg(ratatui::style::Color::Blue),
             );
 
-        frame.render_stateful_widget(list, chunks[0], &mut self.list_state);
+        frame.render_stateful_widget(
+            list,
+            left_chunks[0],
+            &mut self.list_state,
+        );
 
         let input_block =
             Block::default().borders(Borders::ALL).title("Search");
-        frame.render_widget(input_block, chunks[1]);
+        frame.render_widget(input_block, left_chunks[1]);
 
         let text = "> ".to_string() + &self.input;
         let input_text = ratatui::widgets::Paragraph::new(text).style(
@@ -120,11 +146,35 @@ impl MenuUi {
 
         frame.render_widget(
             input_text,
-            chunks[1].inner(ratatui::layout::Margin {
+            left_chunks[1].inner(ratatui::layout::Margin {
                 horizontal: 1,
                 vertical: 1,
             }),
         );
+
+        if self.show_preview {
+            let preview_block =
+                Block::default().borders(Borders::ALL).title("Preview");
+
+            let preview_content = self.generate_preview_content();
+            let preview = Paragraph::new(preview_content).block(preview_block);
+
+            frame.render_widget(preview, chunks[1]);
+        }
+    }
+
+    fn generate_preview_content(&self) -> String {
+        if let Some(selection_idx) = self.list_state.selected() {
+            if let Some(selection) = self.filtered_items.get(selection_idx) {
+                if let Ok(session_str) = load_session_from_config(selection) {
+                    let session: Session =
+                        serde_yaml::from_str(&session_str).ok().unwrap();
+                    return session.get_preview();
+                }
+            }
+        }
+
+        "".to_string()
     }
 
     fn handle_events(&mut self) -> Result<()> {
@@ -164,6 +214,7 @@ impl MenuUi {
                     }
                 }
                 KeyCode::Char('c') => self.exit = true,
+                KeyCode::Char('t') => self.show_preview = !self.show_preview,
                 _ => {}
             }
         } else {

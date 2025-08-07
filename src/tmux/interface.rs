@@ -6,31 +6,10 @@ use std::thread::sleep;
 use std::time::Duration;
 
 use anyhow::{Context, Result};
-use serde::{Deserialize, Serialize};
 use shell_escape::escape;
 use tempfile::NamedTempFile;
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Pane {
-    index: String,
-    current_command: Option<String>,
-    work_dir: String,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Window {
-    index: String,
-    name: String,
-    layout: String,
-    panes: Vec<Pane>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Session {
-    pub name: String,
-    work_dir: String,
-    windows: Vec<Window>,
-}
+use crate::tmux::session::*;
 
 const TMUX_FIELD_SEPARATOR: &str = " ";
 const TMUX_LINE_SEPARATOR: &str = "\n";
