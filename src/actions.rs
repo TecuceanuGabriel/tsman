@@ -2,10 +2,10 @@ use std::fs;
 use std::process::Command;
 
 use crate::cli::{Args, Commands};
+use crate::menu::{self, MenuAction, MenuUi};
 use crate::persistence::*;
 use crate::tmux::interface::*;
 use crate::tmux::session::Session;
-use crate::tui::{self, MenuAction, MenuUi};
 
 use anyhow::{Context, Result};
 use regex::Regex;
@@ -86,13 +86,13 @@ fn delete(session_name: &str) -> Result<()> {
 }
 
 fn menu(show_preview: bool) -> Result<()> {
-    let mut terminal = tui::init()?;
+    let mut terminal = menu::init()?;
 
     let session_names = list_saved_sessions()?;
     let mut menu_ui = MenuUi::new(session_names, show_preview);
     menu_ui.run(&mut terminal)?;
 
-    tui::restore(terminal)?;
+    menu::restore(terminal)?;
 
     while let Some(item) = menu_ui.dequeue_action()? {
         match item.action {

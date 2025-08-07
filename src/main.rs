@@ -1,8 +1,8 @@
 mod actions;
 mod cli;
+mod menu;
 mod persistence;
 mod tmux;
-mod tui;
 
 use anyhow::{Context, Result};
 use clap::Parser;
