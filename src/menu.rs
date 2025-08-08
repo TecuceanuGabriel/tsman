@@ -204,7 +204,7 @@ impl MenuUi {
             .borders(Borders::ALL)
             .style(Style::default().bg(Color::DarkGray));
 
-        let paragraph = Paragraph::new(Line::from("y/n"))
+        let paragraph = Paragraph::new(Line::from("Y/n"))
             .block(block)
             .alignment(Alignment::Center);
 
@@ -238,11 +238,11 @@ impl MenuUi {
 
         if self.show_confirmation_popup {
             match key.code {
-                KeyCode::Char('y' | 'Y') => {
+                KeyCode::Char('y' | 'Y') | KeyCode::Enter => {
                     self.handle_delete();
                     self.show_confirmation_popup = false;
                 }
-                KeyCode::Char('n' | 'N') => {
+                KeyCode::Char('n' | 'N' | 'q') | KeyCode::Esc => {
                     self.show_confirmation_popup = false;
                 }
                 _ => {}
