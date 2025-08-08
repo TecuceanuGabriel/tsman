@@ -18,9 +18,11 @@ use fuzzy_matcher::{FuzzyMatcher, skim::SkimMatcherV2};
 
 use ratatui::{
     DefaultTerminal, Frame, Terminal,
-    layout::{Constraint, Direction, Layout},
+    layout::{Alignment, Constraint, Direction, Flex, Layout, Rect},
     prelude::CrosstermBackend,
-    widgets::{Block, Borders, List, ListState, Paragraph},
+    style::{Color, Style},
+    text::Line,
+    widgets::{Block, Borders, Clear, List, ListState, Paragraph},
 };
 
 use anyhow::Result;
@@ -51,6 +53,8 @@ pub struct MenuUi {
 
     action_queue: VecDeque<MenuActionItem>,
 
+    ask_for_confirmation: bool,
+    show_confirmation_popup: bool,
     show_preview: bool,
 
     exit: bool,
@@ -64,6 +68,7 @@ impl fmt::Debug for MenuUi {
             .field("input", &self.input)
             .field("list_state", &self.list_state)
             .field("action_queue", &self.action_queue)
+            .field("show_confirmation_popup", &self.show_confirmation_popup)
             .field("show_preview", &self.show_preview)
             .field("exit", &self.exit)
             .finish()
@@ -71,7 +76,11 @@ impl fmt::Debug for MenuUi {
 }
 
 impl MenuUi {
-    pub fn new(items: Vec<String>, show_preview: bool) -> Self {
+    pub fn new(
+        items: Vec<String>,
+        show_preview: bool,
+        ask_for_confirmation: bool,
+    ) -> Self {
         let mut list_state = ListState::default();
         list_state.select(Some(0));
 
@@ -82,6 +91,8 @@ impl MenuUi {
             list_state,
             matcher: fuzzy_matcher::skim::SkimMatcherV2::default(),
             action_queue: VecDeque::new(),
+            ask_for_confirmation,
+            show_confirmation_popup: false,
             show_preview,
             exit: false,
         }
@@ -153,6 +164,7 @@ impl MenuUi {
         );
 
         if self.show_preview {
+            // TODO: extract to function
             let preview_block =
                 Block::default().borders(Borders::ALL).title("Preview");
 
@@ -160,6 +172,10 @@ impl MenuUi {
             let preview = Paragraph::new(preview_content).block(preview_block);
 
             frame.render_widget(preview, chunks[1]);
+        }
+
+        if self.ask_for_confirmation && self.show_confirmation_popup {
+            MenuUi::draw_confirmation_popup(frame);
         }
     }
 
@@ -177,6 +193,34 @@ impl MenuUi {
         "".to_string()
     }
 
+    fn draw_confirmation_popup(f: &mut Frame) {
+        let popup_area = MenuUi::create_centered_rect(f.area(), 15, 3);
+
+        f.render_widget(Clear, popup_area);
+
+        let block = Block::default()
+            .title("Confirm")
+            .title_alignment(Alignment::Center)
+            .borders(Borders::ALL)
+            .style(Style::default().bg(Color::DarkGray));
+
+        let paragraph = Paragraph::new(Line::from("Y/n"))
+            .block(block)
+            .alignment(Alignment::Center);
+
+        f.render_widget(paragraph, popup_area);
+    }
+
+    fn create_centered_rect(area: Rect, length_x: u16, length_y: u16) -> Rect {
+        let vertical =
+            Layout::vertical([Constraint::Length(length_y)]).flex(Flex::Center);
+        let horizontal = Layout::horizontal([Constraint::Length(length_x)])
+            .flex(Flex::Center);
+        let [area] = vertical.areas(area);
+        let [area] = horizontal.areas(area);
+        area
+    }
+
     fn handle_events(&mut self) -> Result<()> {
         if event::poll(Duration::from_millis(50))? {
             if let Event::Key(key) = event::read()? {
@@ -192,25 +236,30 @@ impl MenuUi {
             return;
         }
 
+        if self.show_confirmation_popup {
+            match key.code {
+                KeyCode::Char('y' | 'Y') | KeyCode::Enter => {
+                    self.handle_delete();
+                    self.show_confirmation_popup = false;
+                }
+                KeyCode::Char('n' | 'N' | 'q') | KeyCode::Esc => {
+                    self.show_confirmation_popup = false;
+                }
+                _ => {}
+            }
+            return;
+        }
+
         if key.modifiers.contains(KeyModifiers::CONTROL) {
             match key.code {
                 KeyCode::Char('p') => self.move_selection(-1),
                 KeyCode::Char('n') => self.move_selection(1),
                 KeyCode::Char('e') => self.enqueue_action(MenuAction::Edit),
                 KeyCode::Char('d') => {
-                    if let Some(selection_idx) = self.list_state.selected() {
-                        let selection =
-                            match self.filtered_items.get(selection_idx) {
-                                Some(s) => s.clone(),
-                                None => return,
-                            };
-
-                        self.enqueue_action(MenuAction::Delete);
-
-                        self.all_items.retain(|s| s != &selection);
-                        self.update_filter();
-                        self.list_state
-                            .select(Some(selection_idx.saturating_sub(1)));
+                    if self.ask_for_confirmation {
+                        self.show_confirmation_popup = true;
+                    } else {
+                        self.handle_delete();
                     }
                 }
                 KeyCode::Char('c') => self.exit = true,
@@ -237,6 +286,22 @@ impl MenuUi {
                 KeyCode::Esc => self.exit = true,
                 _ => {}
             }
+        }
+    }
+
+    fn handle_delete(&mut self) {
+        if let Some(selection_idx) = self.list_state.selected() {
+            let selection = match self.filtered_items.get(selection_idx) {
+                Some(s) => s.clone(),
+                None => return,
+            };
+
+            self.enqueue_action(MenuAction::Delete);
+
+            self.all_items.retain(|s| s != &selection);
+            self.update_filter();
+            self.list_state
+                .select(Some(selection_idx.saturating_sub(1)));
         }
     }
 

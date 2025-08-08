@@ -28,5 +28,7 @@ pub enum Commands {
     Menu {
         #[clap(long, short, help = "Show preview pane on start up")]
         preview: bool,
+        #[clap(long, short, help = "Ask for confirmation before deleting")]
+        ask_for_confirmation: bool,
     },
 }
