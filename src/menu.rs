@@ -53,6 +53,7 @@ pub struct MenuUi {
 
     action_queue: VecDeque<MenuActionItem>,
 
+    ask_for_confirmation: bool,
     show_confirmation_popup: bool,
     show_preview: bool,
 
@@ -75,7 +76,11 @@ impl fmt::Debug for MenuUi {
 }
 
 impl MenuUi {
-    pub fn new(items: Vec<String>, show_preview: bool) -> Self {
+    pub fn new(
+        items: Vec<String>,
+        show_preview: bool,
+        ask_for_confirmation: bool,
+    ) -> Self {
         let mut list_state = ListState::default();
         list_state.select(Some(0));
 
@@ -86,6 +91,7 @@ impl MenuUi {
             list_state,
             matcher: fuzzy_matcher::skim::SkimMatcherV2::default(),
             action_queue: VecDeque::new(),
+            ask_for_confirmation,
             show_confirmation_popup: false,
             show_preview,
             exit: false,
@@ -168,7 +174,7 @@ impl MenuUi {
             frame.render_widget(preview, chunks[1]);
         }
 
-        if self.show_confirmation_popup {
+        if self.ask_for_confirmation && self.show_confirmation_popup {
             MenuUi::draw_confirmation_popup(frame);
         }
     }
@@ -233,24 +239,11 @@ impl MenuUi {
         if self.show_confirmation_popup {
             match key.code {
                 KeyCode::Char('y' | 'Y') => {
-                    if let Some(selection_idx) = self.list_state.selected() {
-                        let selection =
-                            match self.filtered_items.get(selection_idx) {
-                                Some(s) => s.clone(),
-                                None => return,
-                            };
-
-                        self.enqueue_action(MenuAction::Delete);
-
-                        self.all_items.retain(|s| s != &selection);
-                        self.update_filter();
-                        self.list_state
-                            .select(Some(selection_idx.saturating_sub(1)));
-                    }
-                    self.show_confirmation_popup = false
+                    self.handle_delete();
+                    self.show_confirmation_popup = false;
                 }
                 KeyCode::Char('n' | 'N') => {
-                    self.show_confirmation_popup = false
+                    self.show_confirmation_popup = false;
                 }
                 _ => {}
             }
@@ -263,7 +256,11 @@ impl MenuUi {
                 KeyCode::Char('n') => self.move_selection(1),
                 KeyCode::Char('e') => self.enqueue_action(MenuAction::Edit),
                 KeyCode::Char('d') => {
-                    self.show_confirmation_popup = true;
+                    if self.ask_for_confirmation {
+                        self.show_confirmation_popup = true;
+                    } else {
+                        self.handle_delete();
+                    }
                 }
                 KeyCode::Char('c') => self.exit = true,
                 KeyCode::Char('t') => self.show_preview = !self.show_preview,
@@ -289,6 +286,22 @@ impl MenuUi {
                 KeyCode::Esc => self.exit = true,
                 _ => {}
             }
+        }
+    }
+
+    fn handle_delete(&mut self) {
+        if let Some(selection_idx) = self.list_state.selected() {
+            let selection = match self.filtered_items.get(selection_idx) {
+                Some(s) => s.clone(),
+                None => return,
+            };
+
+            self.enqueue_action(MenuAction::Delete);
+
+            self.all_items.retain(|s| s != &selection);
+            self.update_filter();
+            self.list_state
+                .select(Some(selection_idx.saturating_sub(1)));
         }
     }
 

@@ -17,7 +17,10 @@ pub fn handle(args: Args) -> Result<()> {
         Commands::Open { session_name } => open(&session_name),
         Commands::Edit { session_name } => edit(session_name.as_deref()),
         Commands::Delete { session_name } => delete(&session_name),
-        Commands::Menu { preview } => menu(preview),
+        Commands::Menu {
+            preview,
+            ask_for_confirmation,
+        } => menu(preview, ask_for_confirmation),
     }
 }
 
@@ -85,11 +88,12 @@ fn delete(session_name: &str) -> Result<()> {
     Ok(())
 }
 
-fn menu(show_preview: bool) -> Result<()> {
+fn menu(show_preview: bool, ask_for_confirmation: bool) -> Result<()> {
     let mut terminal = menu::init()?;
 
     let session_names = list_saved_sessions()?;
-    let mut menu_ui = MenuUi::new(session_names, show_preview);
+    let mut menu_ui =
+        MenuUi::new(session_names, show_preview, ask_for_confirmation);
     menu_ui.run(&mut terminal)?;
 
     menu::restore(terminal)?;
