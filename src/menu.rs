@@ -215,6 +215,10 @@ impl MenuUi {
                 }
                 KeyCode::Char('c') => self.exit = true,
                 KeyCode::Char('t') => self.show_preview = !self.show_preview,
+                KeyCode::Char('w') => {
+                    self.remove_last_word_from_input();
+                    self.update_filter_and_reset();
+                }
                 _ => {}
             }
         } else {
@@ -287,6 +291,14 @@ impl MenuUi {
             self.list_state.select(Some(
                 new_selected.min(self.filtered_items.len().saturating_sub(1)),
             ));
+        }
+    }
+
+    fn remove_last_word_from_input(&mut self) {
+        if let Some(last_space) = self.input.trim_end().rfind(' ') {
+            self.input.truncate(last_space);
+        } else {
+            self.input.clear();
         }
     }
 }
