@@ -94,16 +94,19 @@ impl fmt::Debug for MenuUi {
 
 impl MenuUi {
     pub fn new(
-        items: Vec<String>,
+        items: Vec<MenuItem>,
         show_preview: bool,
         ask_for_confirmation: bool,
     ) -> Self {
         let mut list_state = ListState::default();
         list_state.select(Some(0));
 
+        let filtered_items =
+            items.iter().map(|item| item.name.clone()).collect();
+
         Self {
-            all_items: items.clone()
-            filtered_items: items,
+            all_items: items,
+            filtered_items,
             input: String::new(),
             list_state,
             matcher: fuzzy_matcher::skim::SkimMatcherV2::default(),
@@ -315,7 +318,7 @@ impl MenuUi {
 
             self.enqueue_action(MenuAction::Delete);
 
-            self.all_items.retain(|s| s != &selection);
+            self.all_items.retain(|item| item.name != selection);
             self.update_filter();
             self.list_state
                 .select(Some(selection_idx.saturating_sub(1)));
@@ -344,15 +347,19 @@ impl MenuUi {
 
     fn update_filter(&mut self) {
         if self.input.is_empty() {
-            self.filtered_items = self.all_items.clone();
+            self.filtered_items = self
+                .all_items
+                .iter()
+                .map(|item| item.name.clone())
+                .collect();
         } else {
             self.filtered_items = self
                 .all_items
                 .iter()
+                .map(|item| item.name.clone())
                 .filter(|item| {
                     self.matcher.fuzzy_match(item, &self.input).is_some()
                 })
-                .cloned()
                 .collect();
         }
     }
