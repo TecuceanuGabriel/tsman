@@ -92,6 +92,16 @@ impl fmt::Debug for MenuUi {
     }
 }
 
+impl MenuItem {
+    pub fn new(name: String, saved: bool, active: bool) -> Self {
+        Self {
+            name,
+            saved,
+            active,
+        }
+    }
+}
+
 impl MenuUi {
     pub fn new(
         items: Vec<MenuItem>,
