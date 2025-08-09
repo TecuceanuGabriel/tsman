@@ -336,7 +336,9 @@ impl MenuUi {
                 self.update_menu_item(&selection.name, None, Some(false));
             }
 
-            if !selection.active {
+            if (selection.saved && !selection.active)
+                || (!selection.saved && selection.active)
+            {
                 self.all_items.retain(|item| item.name != selection.name);
                 self.list_state
                     .select(Some(selection_idx.saturating_sub(1)));
