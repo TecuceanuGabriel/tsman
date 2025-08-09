@@ -29,6 +29,54 @@ pub fn get_session() -> Result<Session> {
 }
 
 pub fn restore_session(session: &Session) -> Result<()> {
+    let temp_session_name = format!("tsman-temp-{}", std::process::id());
+
+    let mut script_str = String::new();
+
+    script_str += &format!(
+        "tmux new-session -d -s {} -c {}\n",
+        temp_session_name,
+        escape(Cow::from(&session.work_dir))
+    );
+
+    let first_window = &session.windows[0];
+
+    script_str +=
+        &get_window_config_cmd(&temp_session_name, &session, &first_window)?;
+
+    for window in session.windows.iter().skip(1) {
+        script_str += &format!(
+            "tmux new-window -d -t {} -n {} -c {}\n",
+            temp_session_name,
+            window.name,
+            escape(Cow::from(&session.work_dir))
+        );
+
+        script_str +=
+            &get_window_config_cmd(&temp_session_name, session, &window)?;
+    }
+
+    // this helps avoid naming conflicts inside tmux
+    script_str += &format!(
+        "tmux rename-session -t {} {}\n",
+        temp_session_name, session.name
+    );
+
+    let script = NamedTempFile::new()?;
+
+    write(script.path(), script_str)?;
+
+    Command::new("sh")
+        .arg(script.path())
+        .status()
+        .context("Failed to reconstruct session")?;
+
+    sleep(Duration::from_millis(ATTACH_DELAY));
+
+    attach_to_session(&session.name)
+}
+
+pub fn is_active_session(session_name: &str) -> Result<bool> {
     let output = Command::new("tmux")
         .arg("list-session")
         .args(["-F", "#{session_name}"])
@@ -39,55 +87,10 @@ pub fn restore_session(session: &Session) -> Result<()> {
     let session_names =
         output_str.split(TMUX_LINE_SEPARATOR).collect::<Vec<&str>>();
 
-    if !session_names.contains(&session.name.as_str()) {
-        let temp_session_name = format!("tsman-temp-{}", std::process::id());
+    Ok(session_names.contains(&session_name))
+}
 
-        let mut script_str = String::new();
-
-        script_str += &format!(
-            "tmux new-session -d -s {} -c {}\n",
-            temp_session_name,
-            escape(Cow::from(&session.work_dir))
-        );
-
-        let first_window = &session.windows[0];
-
-        script_str += &get_window_config_cmd(
-            &temp_session_name,
-            &session,
-            &first_window,
-        )?;
-
-        for window in session.windows.iter().skip(1) {
-            script_str += &format!(
-                "tmux new-window -d -t {} -n {} -c {}\n",
-                temp_session_name,
-                window.name,
-                escape(Cow::from(&session.work_dir))
-            );
-
-            script_str +=
-                &get_window_config_cmd(&temp_session_name, session, &window)?;
-        }
-
-        // this helps avoid naming conflicts inside tmux
-        script_str += &format!(
-            "tmux rename-session -t {} {}\n",
-            temp_session_name, session.name
-        );
-
-        let script = NamedTempFile::new()?;
-
-        write(script.path(), script_str)?;
-
-        Command::new("sh")
-            .arg(script.path())
-            .status()
-            .context("Failed to reconstruct session")?;
-
-        sleep(Duration::from_millis(ATTACH_DELAY));
-    }
-
+pub fn attach_to_session(session_name: &str) -> Result<()> {
     let is_attached = env::var("TMUX").is_ok();
     let attach_cmd = if is_attached {
         "switch-client"
@@ -97,9 +100,19 @@ pub fn restore_session(session: &Session) -> Result<()> {
 
     Command::new("tmux")
         .arg(attach_cmd)
-        .args(["-t", &session.name])
+        .args(["-t", session_name])
         .status()
         .context("Failed to attach session")?;
+
+    Ok(())
+}
+
+pub fn close_session(session_name: &str) -> Result<()> {
+    Command::new("tmux")
+        .arg("kill-session")
+        .args(["-t", session_name])
+        .status()
+        .context("Failed to kill session")?;
 
     Ok(())
 }
@@ -126,6 +139,34 @@ pub fn get_session_info() -> Result<(String, String)> {
             string_output
         ),
     }
+}
+
+pub fn list_active_sessions() -> Result<Vec<String>> {
+    let status = Command::new("tmux")
+        .arg("has-session")
+        .status()
+        .context("Failed to check tmux server status")?;
+
+    if !status.success() {
+        return Ok(Vec::new()); // server not running
+    }
+
+    let output = Command::new("tmux")
+        .arg("list-sessions")
+        .args(["-F", "#{session_name}"])
+        .output()
+        .context("Failed to get active sessions")?;
+
+    let string_output = String::from_utf8(output.stdout)
+        .context("Failed to convert tmux output to UTF-8 string")?;
+
+    let parts: Vec<String> = string_output
+        .trim()
+        .split(TMUX_LINE_SEPARATOR)
+        .map(|s| s.to_string())
+        .collect();
+
+    Ok(parts)
 }
 
 fn get_windows() -> Result<Vec<Window>> {

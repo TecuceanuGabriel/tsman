@@ -32,9 +32,11 @@ use crate::tmux::session::Session;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum MenuAction {
+    Save,
     Open,
     Edit,
     Delete,
+    Close,
 }
 
 #[derive(Debug)]
@@ -43,9 +45,16 @@ pub struct MenuActionItem {
     pub action: MenuAction,
 }
 
+#[derive(Debug, Clone)]
+pub struct MenuItem {
+    name: String,
+    saved: bool,
+    active: bool,
+}
+
 pub struct MenuUi {
-    all_items: Vec<String>,
-    filtered_items: Vec<String>,
+    all_items: Vec<MenuItem>,
+    filtered_items: Vec<MenuItem>,
     input: String,
 
     list_state: ListState,
@@ -58,6 +67,26 @@ pub struct MenuUi {
     show_preview: bool,
 
     exit: bool,
+}
+
+impl fmt::Display for MenuItem {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.saved {
+            write!(f, "{}", self.name)
+        } else {
+            write!(f, "* {}", self.name)
+        }
+    }
+}
+
+impl MenuItem {
+    pub fn new(name: String, saved: bool, active: bool) -> Self {
+        Self {
+            name,
+            saved,
+            active,
+        }
+    }
 }
 
 impl fmt::Debug for MenuUi {
@@ -77,7 +106,7 @@ impl fmt::Debug for MenuUi {
 
 impl MenuUi {
     pub fn new(
-        items: Vec<String>,
+        items: Vec<MenuItem>,
         show_preview: bool,
         ask_for_confirmation: bool,
     ) -> Self {
@@ -132,7 +161,7 @@ impl MenuUi {
             .constraints([Constraint::Min(3), Constraint::Length(3)])
             .split(chunks[0]);
 
-        let items = self.filtered_items.iter().map(|s| s.as_str());
+        let items = self.filtered_items.iter().map(|s| s.to_string());
         let list = List::new(items)
             .block(Block::default().borders(Borders::ALL).title("Results"))
             .highlight_style(
@@ -182,7 +211,9 @@ impl MenuUi {
     fn generate_preview_content(&self) -> String {
         if let Some(selection_idx) = self.list_state.selected() {
             if let Some(selection) = self.filtered_items.get(selection_idx) {
-                if let Ok(session_str) = load_session_from_config(selection) {
+                if let Ok(session_str) =
+                    load_session_from_config(&selection.name)
+                {
                     let session: Session =
                         serde_yaml::from_str(&session_str).ok().unwrap();
                     return session.get_preview();
@@ -254,7 +285,8 @@ impl MenuUi {
             match key.code {
                 KeyCode::Char('p') => self.move_selection(-1),
                 KeyCode::Char('n') => self.move_selection(1),
-                KeyCode::Char('e') => self.enqueue_action(MenuAction::Edit),
+                KeyCode::Char('e') => self.handle_edit(),
+                KeyCode::Char('s') => self.handle_save(),
                 KeyCode::Char('d') => {
                     if self.ask_for_confirmation {
                         self.show_confirmation_popup = true;
@@ -296,24 +328,80 @@ impl MenuUi {
                 None => return,
             };
 
-            self.enqueue_action(MenuAction::Delete);
+            if selection.saved {
+                self.enqueue_action(MenuAction::Delete);
+                self.update_menu_item(&selection.name, Some(false), None);
+            } else {
+                self.enqueue_action(MenuAction::Close);
+                self.update_menu_item(&selection.name, None, Some(false));
+            }
 
-            self.all_items.retain(|s| s != &selection);
+            if !selection.active {
+                self.all_items.retain(|item| item.name != selection.name);
+                self.list_state
+                    .select(Some(selection_idx.saturating_sub(1)));
+            }
+
             self.update_filter();
-            self.list_state
-                .select(Some(selection_idx.saturating_sub(1)));
+        }
+    }
+
+    fn handle_edit(&mut self) {
+        if let Some(selection_idx) = self.list_state.selected() {
+            let selection = match self.filtered_items.get(selection_idx) {
+                Some(s) => s.clone(),
+                None => return,
+            };
+
+            if selection.saved {
+                self.enqueue_action(MenuAction::Edit)
+            }
+        }
+    }
+
+    fn handle_save(&mut self) {
+        if let Some(selection_idx) = self.list_state.selected() {
+            let selection = match self.filtered_items.get(selection_idx) {
+                Some(s) => s.clone(),
+                None => return,
+            };
+
+            if !selection.saved {
+                self.enqueue_action(MenuAction::Save);
+                self.update_menu_item(&selection.name, Some(true), None);
+                self.update_filter();
+            }
+        }
+    }
+
+    fn update_menu_item(
+        &mut self,
+        name: &str,
+        saved: Option<bool>,
+        active: Option<bool>,
+    ) {
+        if let Some(item) = self.all_items.iter_mut().find(|i| i.name == name) {
+            if let Some(saved_val) = saved {
+                item.saved = saved_val;
+            }
+            if let Some(active_val) = active {
+                item.active = active_val;
+            }
         }
     }
 
     fn enqueue_action(&mut self, action: MenuAction) {
         if let Some(selection_idx) = self.list_state.selected() {
             if let Some(selection) = self.filtered_items.get(selection_idx) {
-                if action != MenuAction::Delete {
+                if action != MenuAction::Delete
+                    && action != MenuAction::Close
+                    && action != MenuAction::Save
+                {
                     self.exit = true;
                 }
 
                 self.action_queue.push_back(MenuActionItem {
-                    selection: selection.to_string(),
+                    selection: selection.name.clone(),
                     action,
                 });
             }
@@ -333,7 +421,7 @@ impl MenuUi {
                 .all_items
                 .iter()
                 .filter(|item| {
-                    self.matcher.fuzzy_match(item, &self.input).is_some()
+                    self.matcher.fuzzy_match(&item.name, &self.input).is_some()
                 })
                 .cloned()
                 .collect();

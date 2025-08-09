@@ -1,8 +1,9 @@
+use std::collections::HashSet;
 use std::fs;
 use std::process::Command;
 
 use crate::cli::{Args, Commands};
-use crate::menu::{self, MenuAction, MenuUi};
+use crate::menu::{self, MenuAction, MenuItem, MenuUi};
 use crate::persistence::*;
 use crate::tmux::interface::*;
 use crate::tmux::session::Session;
@@ -52,6 +53,11 @@ fn validate_session_name(name: &str) -> Result<()> {
 }
 
 fn open(session_name: &str) -> Result<()> {
+    if is_active_session(session_name)? {
+        attach_to_session(session_name)?;
+        return Ok(());
+    }
+
     let yaml = load_session_from_config(session_name)
         .context("Failed to read session from config file")?;
 
@@ -91,20 +97,47 @@ fn delete(session_name: &str) -> Result<()> {
 fn menu(show_preview: bool, ask_for_confirmation: bool) -> Result<()> {
     let mut terminal = menu::init()?;
 
-    let session_names = list_saved_sessions()?;
     let mut menu_ui =
-        MenuUi::new(session_names, show_preview, ask_for_confirmation);
+        MenuUi::new(get_all_sessions()?, show_preview, ask_for_confirmation);
     menu_ui.run(&mut terminal)?;
 
     menu::restore(terminal)?;
 
     while let Some(item) = menu_ui.dequeue_action()? {
         match item.action {
+            MenuAction::Save => save(Some(&item.selection))?,
             MenuAction::Open => open(&item.selection)?,
             MenuAction::Edit => edit(Some(&item.selection))?,
             MenuAction::Delete => delete(&item.selection)?,
+            MenuAction::Close => close_session(&item.selection)?,
         }
     }
 
     Ok(())
+}
+
+fn get_all_sessions() -> Result<Vec<MenuItem>> {
+    let saved_sessions: HashSet<String> =
+        list_saved_sessions()?.into_iter().collect();
+
+    let active_sessions: HashSet<String> =
+        list_active_sessions()?.into_iter().collect();
+
+    println!("{}", active_sessions.len());
+
+    let union: HashSet<_> =
+        saved_sessions.union(&active_sessions).cloned().collect();
+
+    let all_sessions: Vec<MenuItem> = union
+        .into_iter()
+        .map(|name| {
+            MenuItem::new(
+                name.clone(),
+                saved_sessions.contains(&name),
+                active_sessions.contains(&name),
+            )
+        })
+        .collect();
+
+    Ok(all_sessions)
 }
