@@ -103,6 +103,7 @@ fn menu(show_preview: bool, ask_for_confirmation: bool) -> Result<()> {
             MenuAction::Open => open(&item.selection)?,
             MenuAction::Edit => edit(Some(&item.selection))?,
             MenuAction::Delete => delete(&item.selection)?,
+            MenuAction::Close => close_session(&item.selection)?,
         }
     }
 

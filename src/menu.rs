@@ -35,17 +35,18 @@ pub enum MenuAction {
     Open,
     Edit,
     Delete,
+    Close,
 }
 
 #[derive(Debug)]
 pub struct MenuActionItem {
-    pub selection: MenuItem,
+    pub selection: String,
     pub action: MenuAction,
 }
 
 #[derive(Debug, Clone)]
 pub struct MenuItem {
-    pub name: String,
+    name: String,
     saved: bool,
     active: bool,
 }
@@ -333,7 +334,11 @@ impl MenuUi {
                 None => return,
             };
 
-            self.enqueue_action(MenuAction::Delete);
+            if selection.saved {
+                self.enqueue_action(MenuAction::Delete);
+            } else {
+                self.enqueue_action(MenuAction::Close);
+            }
 
             self.all_items.retain(|item| item.name != selection.name);
             self.update_filter();
@@ -345,12 +350,14 @@ impl MenuUi {
     fn enqueue_action(&mut self, action: MenuAction) {
         if let Some(selection_idx) = self.list_state.selected() {
             if let Some(selection) = self.filtered_items.get(selection_idx) {
-                if action != MenuAction::Delete {
+                if action != MenuAction::Delete && action != MenuAction::Close {
                     self.exit = true;
                 }
 
-                self.action_queue
-                    .push_back(MenuActionItem { selection, action });
+                self.action_queue.push_back(MenuActionItem {
+                    selection: selection.name.clone(),
+                    action,
+                });
             }
         }
     }

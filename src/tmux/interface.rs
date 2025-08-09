@@ -29,50 +29,54 @@ pub fn get_session() -> Result<Session> {
 }
 
 pub fn restore_session(session: &Session) -> Result<()> {
-    let temp_session_name = format!("tsman-temp-{}", std::process::id());
+    if !is_active_session(&session.name)? {
+        let temp_session_name = format!("tsman-temp-{}", std::process::id());
 
-    let mut script_str = String::new();
+        let mut script_str = String::new();
 
-    script_str += &format!(
-        "tmux new-session -d -s {} -c {}\n",
-        temp_session_name,
-        escape(Cow::from(&session.work_dir))
-    );
-
-    let first_window = &session.windows[0];
-
-    script_str +=
-        &get_window_config_cmd(&temp_session_name, &session, &first_window)?;
-
-    for window in session.windows.iter().skip(1) {
         script_str += &format!(
-            "tmux new-window -d -t {} -n {} -c {}\n",
+            "tmux new-session -d -s {} -c {}\n",
             temp_session_name,
-            window.name,
             escape(Cow::from(&session.work_dir))
         );
 
-        script_str +=
-            &get_window_config_cmd(&temp_session_name, session, &window)?;
+        let first_window = &session.windows[0];
+
+        script_str += &get_window_config_cmd(
+            &temp_session_name,
+            &session,
+            &first_window,
+        )?;
+
+        for window in session.windows.iter().skip(1) {
+            script_str += &format!(
+                "tmux new-window -d -t {} -n {} -c {}\n",
+                temp_session_name,
+                window.name,
+                escape(Cow::from(&session.work_dir))
+            );
+
+            script_str +=
+                &get_window_config_cmd(&temp_session_name, session, &window)?;
+        }
+
+        // this helps avoid naming conflicts inside tmux
+        script_str += &format!(
+            "tmux rename-session -t {} {}\n",
+            temp_session_name, session.name
+        );
+
+        let script = NamedTempFile::new()?;
+
+        write(script.path(), script_str)?;
+
+        Command::new("sh")
+            .arg(script.path())
+            .status()
+            .context("Failed to reconstruct session")?;
+
+        sleep(Duration::from_millis(ATTACH_DELAY));
     }
-
-    // this helps avoid naming conflicts inside tmux
-    script_str += &format!(
-        "tmux rename-session -t {} {}\n",
-        temp_session_name, session.name
-    );
-
-    let script = NamedTempFile::new()?;
-
-    write(script.path(), script_str)?;
-
-    Command::new("sh")
-        .arg(script.path())
-        .status()
-        .context("Failed to reconstruct session")?;
-
-    sleep(Duration::from_millis(ATTACH_DELAY));
-    // }
 
     attach_to_session(&session.name)
 }
@@ -104,6 +108,16 @@ pub fn attach_to_session(session_name: &str) -> Result<()> {
         .args(["-t", session_name])
         .status()
         .context("Failed to attach session")?;
+
+    Ok(())
+}
+
+pub fn close_session(session_name: &str) -> Result<()> {
+    Command::new("tmux")
+        .arg("kill-session")
+        .args(["-t", session_name])
+        .status()
+        .context("Failed to kill session")?;
 
     Ok(())
 }
