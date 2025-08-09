@@ -43,7 +43,7 @@ pub struct MenuActionItem {
     pub action: MenuAction,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MenuItem {
     name: String,
     saved: bool,
@@ -52,7 +52,7 @@ pub struct MenuItem {
 
 pub struct MenuUi {
     all_items: Vec<MenuItem>,
-    filtered_items: Vec<String>,
+    filtered_items: Vec<MenuItem>,
     input: String,
 
     list_state: ListState,
@@ -111,12 +111,9 @@ impl MenuUi {
         let mut list_state = ListState::default();
         list_state.select(Some(0));
 
-        let filtered_items =
-            items.iter().map(|item| item.name.clone()).collect();
-
         Self {
-            all_items: items,
-            filtered_items,
+            all_items: items.clone(),
+            filtered_items: items,
             input: String::new(),
             list_state,
             matcher: fuzzy_matcher::skim::SkimMatcherV2::default(),
@@ -162,7 +159,7 @@ impl MenuUi {
             .constraints([Constraint::Min(3), Constraint::Length(3)])
             .split(chunks[0]);
 
-        let items = self.filtered_items.iter().map(|s| s.as_str());
+        let items = self.filtered_items.iter().map(|s| s.name.clone());
         let list = List::new(items)
             .block(Block::default().borders(Borders::ALL).title("Results"))
             .highlight_style(
@@ -212,7 +209,9 @@ impl MenuUi {
     fn generate_preview_content(&self) -> String {
         if let Some(selection_idx) = self.list_state.selected() {
             if let Some(selection) = self.filtered_items.get(selection_idx) {
-                if let Ok(session_str) = load_session_from_config(selection) {
+                if let Ok(session_str) =
+                    load_session_from_config(&selection.name)
+                {
                     let session: Session =
                         serde_yaml::from_str(&session_str).ok().unwrap();
                     return session.get_preview();
@@ -328,7 +327,7 @@ impl MenuUi {
 
             self.enqueue_action(MenuAction::Delete);
 
-            self.all_items.retain(|item| item.name != selection);
+            self.all_items.retain(|item| item.name != selection.name);
             self.update_filter();
             self.list_state
                 .select(Some(selection_idx.saturating_sub(1)));
@@ -357,19 +356,15 @@ impl MenuUi {
 
     fn update_filter(&mut self) {
         if self.input.is_empty() {
-            self.filtered_items = self
-                .all_items
-                .iter()
-                .map(|item| item.name.clone())
-                .collect();
+            self.filtered_items = self.all_items.clone();
         } else {
             self.filtered_items = self
                 .all_items
                 .iter()
-                .map(|item| item.name.clone())
                 .filter(|item| {
-                    self.matcher.fuzzy_match(item, &self.input).is_some()
+                    self.matcher.fuzzy_match(&item.name, &self.input).is_some()
                 })
+                .cloned()
                 .collect();
         }
     }
