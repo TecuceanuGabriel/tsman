@@ -292,7 +292,7 @@ impl MenuUi {
             match key.code {
                 KeyCode::Char('p') => self.move_selection(-1),
                 KeyCode::Char('n') => self.move_selection(1),
-                KeyCode::Char('e') => self.enqueue_action(MenuAction::Edit),
+                KeyCode::Char('e') => self.handle_edit(),
                 KeyCode::Char('d') => {
                     if self.ask_for_confirmation {
                         self.show_confirmation_popup = true;
@@ -344,6 +344,19 @@ impl MenuUi {
             self.update_filter();
             self.list_state
                 .select(Some(selection_idx.saturating_sub(1)));
+        }
+    }
+
+    fn handle_edit(&mut self) {
+        if let Some(selection_idx) = self.list_state.selected() {
+            let selection = match self.filtered_items.get(selection_idx) {
+                Some(s) => s.clone(),
+                None => return,
+            };
+
+            if selection.saved {
+                self.enqueue_action(MenuAction::Edit)
+            }
         }
     }
 
