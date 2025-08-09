@@ -66,7 +66,7 @@ UI Controls:
 
 Session actions:
 
-| command | saved session action                   | unsaved session actoin |
+| command | saved session action                   | unsaved session action |
 | ------- | -------------------------------------- | ---------------------- |
 | `C-e`   | Edit config file of selected session   | -                      |
 | `C-d`   | Delete config file of selected session | Kill session           |
