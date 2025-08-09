@@ -39,13 +39,13 @@ pub enum MenuAction {
 
 #[derive(Debug)]
 pub struct MenuActionItem {
-    pub selection: String,
+    pub selection: MenuItem,
     pub action: MenuAction,
 }
 
 #[derive(Debug, Clone)]
 pub struct MenuItem {
-    name: String,
+    pub name: String,
     saved: bool,
     active: bool,
 }
@@ -77,6 +77,24 @@ impl fmt::Display for MenuItem {
     }
 }
 
+impl MenuItem {
+    pub fn new(name: String, saved: bool, active: bool) -> Self {
+        Self {
+            name,
+            saved,
+            active,
+        }
+    }
+
+    pub fn is_saved(&self) -> bool {
+        self.saved
+    }
+
+    pub fn is_active(&self) -> bool {
+        self.active
+    }
+}
+
 impl fmt::Debug for MenuUi {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("MenuUi")
@@ -89,16 +107,6 @@ impl fmt::Debug for MenuUi {
             .field("show_preview", &self.show_preview)
             .field("exit", &self.exit)
             .finish()
-    }
-}
-
-impl MenuItem {
-    pub fn new(name: String, saved: bool, active: bool) -> Self {
-        Self {
-            name,
-            saved,
-            active,
-        }
     }
 }
 
@@ -341,10 +349,8 @@ impl MenuUi {
                     self.exit = true;
                 }
 
-                self.action_queue.push_back(MenuActionItem {
-                    selection: selection.to_string(),
-                    action,
-                });
+                self.action_queue
+                    .push_back(MenuActionItem { selection, action });
             }
         }
     }
