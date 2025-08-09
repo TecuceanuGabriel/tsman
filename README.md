@@ -105,3 +105,8 @@ export TSMAN_CONFIG_STORAGE_DIR="$HOME/mux-sessions"
 
 - `$EDITOR` must be set to use the edit command.
 - the session config files are saved by defult in `~/.config/.tsessions/`.
+
+## Acknowledgements
+
+- [tmuxinator](https://github.com/tmuxinator/tmuxinator)
+- [ThePrimeagen's tmux-sessionizer](https://github.com/ThePrimeagen/tmux-sessionizer)
