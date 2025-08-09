@@ -32,6 +32,7 @@ use crate::tmux::session::Session;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum MenuAction {
+    Save,
     Open,
     Edit,
     Delete,
@@ -280,6 +281,7 @@ impl MenuUi {
                 KeyCode::Char('p') => self.move_selection(-1),
                 KeyCode::Char('n') => self.move_selection(1),
                 KeyCode::Char('e') => self.handle_edit(),
+                KeyCode::Char('s') => self.handle_save(),
                 KeyCode::Char('d') => {
                     if self.ask_for_confirmation {
                         self.show_confirmation_popup = true;
@@ -347,10 +349,26 @@ impl MenuUi {
         }
     }
 
+    fn handle_save(&mut self) {
+        if let Some(selection_idx) = self.list_state.selected() {
+            let selection = match self.filtered_items.get(selection_idx) {
+                Some(s) => s.clone(),
+                None => return,
+            };
+
+            if !selection.saved {
+                self.enqueue_action(MenuAction::Save);
+            }
+        }
+    }
+
     fn enqueue_action(&mut self, action: MenuAction) {
         if let Some(selection_idx) = self.list_state.selected() {
             if let Some(selection) = self.filtered_items.get(selection_idx) {
-                if action != MenuAction::Delete && action != MenuAction::Close {
+                if action != MenuAction::Delete
+                    && action != MenuAction::Close
+                    && action != MenuAction::Save
+                {
                     self.exit = true;
                 }
 
