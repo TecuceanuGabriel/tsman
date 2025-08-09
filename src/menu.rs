@@ -159,7 +159,7 @@ impl MenuUi {
             .constraints([Constraint::Min(3), Constraint::Length(3)])
             .split(chunks[0]);
 
-        let items = self.filtered_items.iter().map(|s| s.name.clone());
+        let items = self.filtered_items.iter().map(|s| s.to_string());
         let list = List::new(items)
             .block(Block::default().borders(Borders::ALL).title("Results"))
             .highlight_style(
