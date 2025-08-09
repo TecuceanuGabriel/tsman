@@ -43,8 +43,15 @@ pub struct MenuActionItem {
     pub action: MenuAction,
 }
 
+#[derive(Debug)]
+pub struct MenuItem {
+    name: String,
+    saved: bool,
+    active: bool,
+}
+
 pub struct MenuUi {
-    all_items: Vec<String>,
+    all_items: Vec<MenuItem>,
     filtered_items: Vec<String>,
     input: String,
 
@@ -58,6 +65,16 @@ pub struct MenuUi {
     show_preview: bool,
 
     exit: bool,
+}
+
+impl fmt::Display for MenuItem {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.saved {
+            write!(f, "{}", self.name)
+        } else {
+            write!(f, "* {}", self.name)
+        }
+    }
 }
 
 impl fmt::Debug for MenuUi {
@@ -85,7 +102,7 @@ impl MenuUi {
         list_state.select(Some(0));
 
         Self {
-            all_items: items.clone(),
+            all_items: items.clone()
             filtered_items: items,
             input: String::new(),
             list_state,
