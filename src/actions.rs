@@ -53,6 +53,11 @@ fn validate_session_name(name: &str) -> Result<()> {
 }
 
 fn open(session_name: &str) -> Result<()> {
+    if is_active_session(session_name)? {
+        attach_to_session(session_name)?;
+        return Ok(());
+    }
+
     let yaml = load_session_from_config(session_name)
         .context("Failed to read session from config file")?;
 
