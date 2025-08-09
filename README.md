@@ -43,20 +43,35 @@ tsman delete <session_name>
 
 ```bash
 tsman menu
-tsman menu -p # open the menu with the preview pane on
+tsman menu --preview # open the menu with the preview pane on
+tsman menu --ask-for-confirmation # Open a confirmation popup when deleting
 ```
 
 #### Menu keybindings:
 
-| command              | action                                    |
-| -------------------- | ----------------------------------------- |
-| `Esc` / `C-c`        | Exit menu                                 |
-| `Up arrow` / `C-p`   | Select previous item                      |
-| `Down arrow` / `C-n` | Select next item                          |
-| `C-e`                | Edit config file of selected session      |
-| `C-d`                | Delete config file of selected session    |
-| `C-t`                | Toggle the visibility of the preview pane |
-| `Enter`              | Open selected session                     |
+Navigation:
+
+| command              | action               |
+| -------------------- | -------------------- |
+| `Esc` / `C-c`        | Exit menu            |
+| `Up arrow` / `C-p`   | Select previous item |
+| `Down arrow` / `C-n` | Select next item     |
+
+UI Controls:
+
+| command | action                                    |
+| ------- | ----------------------------------------- |
+| `C-t`   | Toggle the visibility of the preview pane |
+| `C-w`   | Delete last word from input               |
+
+Session actions:
+
+| command | saved session action                   | unsaved session actoin |
+| ------- | -------------------------------------- | ---------------------- |
+| `C-e`   | Edit config file of selected session   | -                      |
+| `C-d`   | Delete config file of selected session | Kill session           |
+| `C-s`   | -                                      | Save session           |
+| `Enter` | Open session                           | Open session           |
 
 ## Configuration
 
@@ -67,14 +82,15 @@ Example config:
 `~/.tmux.conf`:
 
 ```bash
-bind -r f run-shell "tmux neww 'tsman menu -p'"
+bind -r f run-shell "tmux neww 'tsman menu -p -a'" # with preview pane and
+                                                   # confirmation popup on
 bind -r C-s run-shell "tsman save"
 ```
 
 `~/.zshrc`:
 
 ```bash
-alias mux-fd="tsman menu -p"
+alias mux-fd="tsman menu -p -a"
 ```
 
 If you want to set up a custom location to store session config files set the
