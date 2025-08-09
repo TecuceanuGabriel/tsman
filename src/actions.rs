@@ -130,7 +130,13 @@ fn get_all_sessions() -> Result<Vec<MenuItem>> {
 
     let all_sessions: Vec<MenuItem> = union
         .into_iter()
-        .map(|name| MenuItem::new(name.clone(), saved_sessions.contains(&name)))
+        .map(|name| {
+            MenuItem::new(
+                name.clone(),
+                saved_sessions.contains(&name),
+                active_sessions.contains(&name),
+            )
+        })
         .collect();
 
     Ok(all_sessions)

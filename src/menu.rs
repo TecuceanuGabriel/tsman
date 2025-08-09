@@ -49,6 +49,7 @@ pub struct MenuActionItem {
 pub struct MenuItem {
     name: String,
     saved: bool,
+    active: bool,
 }
 
 pub struct MenuUi {
@@ -79,8 +80,12 @@ impl fmt::Display for MenuItem {
 }
 
 impl MenuItem {
-    pub fn new(name: String, saved: bool) -> Self {
-        Self { name, saved }
+    pub fn new(name: String, saved: bool, active: bool) -> Self {
+        Self {
+            name,
+            saved,
+            active,
+        }
     }
 }
 
@@ -325,14 +330,19 @@ impl MenuUi {
 
             if selection.saved {
                 self.enqueue_action(MenuAction::Delete);
+                self.update_menu_item(&selection.name, Some(false), None);
             } else {
                 self.enqueue_action(MenuAction::Close);
+                self.update_menu_item(&selection.name, None, Some(false));
             }
 
-            self.all_items.retain(|item| item.name != selection.name);
+            if !selection.active {
+                self.all_items.retain(|item| item.name != selection.name);
+                self.list_state
+                    .select(Some(selection_idx.saturating_sub(1)));
+            }
+
             self.update_filter();
-            self.list_state
-                .select(Some(selection_idx.saturating_sub(1)));
         }
     }
 
@@ -358,6 +368,24 @@ impl MenuUi {
 
             if !selection.saved {
                 self.enqueue_action(MenuAction::Save);
+                self.update_menu_item(&selection.name, Some(true), None);
+                self.update_filter();
+            }
+        }
+    }
+
+    fn update_menu_item(
+        &mut self,
+        name: &str,
+        saved: Option<bool>,
+        active: Option<bool>,
+    ) {
+        if let Some(item) = self.all_items.iter_mut().find(|i| i.name == name) {
+            if let Some(saved_val) = saved {
+                item.saved = saved_val;
+            }
+            if let Some(active_val) = active {
+                item.active = active_val;
             }
         }
     }
