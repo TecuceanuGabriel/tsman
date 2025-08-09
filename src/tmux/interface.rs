@@ -142,6 +142,15 @@ pub fn get_session_info() -> Result<(String, String)> {
 }
 
 pub fn list_active_sessions() -> Result<Vec<String>> {
+    let status = Command::new("tmux")
+        .arg("has-session")
+        .status()
+        .context("Failed to check tmux server status")?;
+
+    if !status.success() {
+        return Ok(Vec::new()); // server not running
+    }
+
     let output = Command::new("tmux")
         .arg("list-sessions")
         .args(["-F", "#{session_name}"])

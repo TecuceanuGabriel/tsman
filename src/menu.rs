@@ -48,7 +48,6 @@ pub struct MenuActionItem {
 pub struct MenuItem {
     name: String,
     saved: bool,
-    active: bool,
 }
 
 pub struct MenuUi {
@@ -79,20 +78,8 @@ impl fmt::Display for MenuItem {
 }
 
 impl MenuItem {
-    pub fn new(name: String, saved: bool, active: bool) -> Self {
-        Self {
-            name,
-            saved,
-            active,
-        }
-    }
-
-    pub fn is_saved(&self) -> bool {
-        self.saved
-    }
-
-    pub fn is_active(&self) -> bool {
-        self.active
+    pub fn new(name: String, saved: bool) -> Self {
+        Self { name, saved }
     }
 }
 

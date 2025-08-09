@@ -122,18 +122,14 @@ fn get_all_sessions() -> Result<Vec<MenuItem>> {
     let active_sessions: HashSet<String> =
         list_active_sessions()?.into_iter().collect();
 
+    println!("{}", active_sessions.len());
+
     let union: HashSet<_> =
         saved_sessions.union(&active_sessions).cloned().collect();
 
     let all_sessions: Vec<MenuItem> = union
         .into_iter()
-        .map(|name| {
-            MenuItem::new(
-                name.clone(),
-                saved_sessions.contains(&name),
-                active_sessions.contains(&name),
-            )
-        })
+        .map(|name| MenuItem::new(name.clone(), saved_sessions.contains(&name)))
         .collect();
 
     Ok(all_sessions)
