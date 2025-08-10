@@ -193,14 +193,7 @@ impl MenuUi {
         );
 
         if self.show_preview {
-            // TODO: extract to function
-            let preview_block =
-                Block::default().borders(Borders::ALL).title("Preview");
-
-            let preview_content = self.generate_preview_content();
-            let preview = Paragraph::new(preview_content).block(preview_block);
-
-            frame.render_widget(preview, chunks[1]);
+            self.draw_preview_pane(frame, chunks[1]);
         }
 
         if self.ask_for_confirmation && self.show_confirmation_popup {
@@ -222,6 +215,16 @@ impl MenuUi {
         }
 
         "".to_string()
+    }
+
+    fn draw_preview_pane(&self, frame: &mut Frame, chunk: Rect) {
+        let preview_block =
+            Block::default().borders(Borders::ALL).title("Preview");
+
+        let preview_content = self.generate_preview_content();
+        let preview = Paragraph::new(preview_content).block(preview_block);
+
+        frame.render_widget(preview, chunk);
     }
 
     fn draw_confirmation_popup(f: &mut Frame) {
