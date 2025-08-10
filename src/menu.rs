@@ -301,7 +301,6 @@ impl MenuUi {
                 KeyCode::Char('t') => self.show_preview = !self.show_preview,
                 KeyCode::Char('w') => {
                     self.remove_last_word_from_input();
-                    self.update_filter_and_reset();
                 }
                 _ => {}
             }
@@ -453,11 +452,17 @@ impl MenuUi {
     }
 
     fn remove_last_word_from_input(&mut self) {
+        if self.input.is_empty() {
+            return;
+        }
+
         if let Some(last_space) = self.input.trim_end().rfind(' ') {
             self.input.truncate(last_space);
         } else {
             self.input.clear();
         }
+
+        self.update_filter_and_reset();
     }
 }
 
