@@ -3,7 +3,16 @@
 A lightweight Tmux session manager with fuzzy-finding (powered by
 [fuzzy-matcher](https://github.com/skim-rs/fuzzy-matcher)).
 
-## Installation
+## ✨Features
+
+- Quickly save/restore/delete tmux sessions.
+- Manually tweak session config files for better control.
+- Manage sessions from the interactive TUI menu:
+  - Use the keybindings to trigger actions (Save/Open/Edit/Delete).
+  - Fuzzily find sessions.
+  - View the sessions structure in the preview panel.
+
+## 📦Installation
 
 ```bash
 cargo install tsman
