@@ -35,7 +35,7 @@ fn save(session_name: Option<&str>) -> Result<()> {
     }
 
     let yaml = serde_yaml::to_string(&current_session).with_context(|| {
-        format!("Failed to serialize session {:#?} to yaml", current_session)
+        format!("Failed to serialize session {current_session:#?} to yaml")
     })?;
 
     save_session_config(&current_session.name, yaml)
@@ -62,7 +62,7 @@ fn open(session_name: &str) -> Result<()> {
         .context("Failed to read session from config file")?;
 
     let session: Session = serde_yaml::from_str(&yaml).with_context(|| {
-        format!("Failed to deserialize session from yaml {}", yaml)
+        format!("Failed to deserialize session from yaml {yaml}")
     })?;
 
     restore_session(&session).context("Failed to restore session")?;
@@ -82,7 +82,7 @@ fn edit(session_name: Option<&str>) -> Result<()> {
 
     Command::new("sh")
         .arg("-c")
-        .arg(format!("$EDITOR {}", path_str))
+        .arg(format!("$EDITOR {path_str}"))
         .status()?;
 
     Ok(())

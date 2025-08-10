@@ -209,8 +209,7 @@ fn get_panes(window_id: &str) -> Result<Vec<Pane>> {
         .output()
         .with_context(|| {
             format!(
-                "Failed to execute 'tmux list-panes' for window {}",
-                window_id
+                "Failed to execute 'tmux list-panes' for window {window_id}",
             )
         })?;
 
@@ -258,7 +257,7 @@ fn get_process_children(shell_pid: &str) -> Result<Vec<(u32, String)>> {
         .args(["--ppid", shell_pid])
         .output()
         .with_context(|| {
-            format!("Failed to get children of process #{}", shell_pid)
+            format!("Failed to get children of process #{shell_pid}")
         })?;
 
     let output_str = String::from_utf8(output.stdout)?;

@@ -43,7 +43,7 @@ pub fn list_saved_sessions() -> Result<Vec<String>> {
 
 pub fn get_config_file_path(file_name: &str) -> Result<PathBuf> {
     let mut path = get_and_ensure_session_storage_dir()?;
-    path.push(format!("{}.yaml", file_name));
+    path.push(format!("{file_name}.yaml"));
     Ok(path)
 }
 
