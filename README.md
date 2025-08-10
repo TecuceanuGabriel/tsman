@@ -12,13 +12,18 @@ A lightweight Tmux session manager with fuzzy-finding (powered by
   - Fuzzily find sessions.
   - View the sessions structure in the preview panel.
 
+## ⚡Requirements
+
+- tmux >= [v3.2](https://github.com/tmux/tmux/releases/tag/3.5a)
+  (Optional but recommended for the display-popup feature).
+
 ## 📦Installation
 
 ```bash
 cargo install tsman
 ```
 
-## Usage
+## 🚀Usage
 
 ### Save current session
 
@@ -56,7 +61,7 @@ tsman menu --preview # open the menu with the preview pane on
 tsman menu --ask-for-confirmation # Open a confirmation popup when deleting
 ```
 
-#### Menu keybindings:
+#### ⌨️Menu keybindings:
 
 Navigation:
 
@@ -82,7 +87,7 @@ Session actions:
 | `C-s`   | -                                      | Save session           |
 | `Enter` | Open session                           | Open session           |
 
-## Configuration
+## 🔧Configuration
 
 You can add keybindings/aliases to your tmux/shell config file for faster usage.
 
@@ -111,12 +116,12 @@ your shell config file to make it persistent:
 export TSMAN_CONFIG_STORAGE_DIR="$HOME/mux-sessions"
 ```
 
-## Notes
+## 🗒️Notes
 
 - `$EDITOR` must be set to use the edit command.
 - the session config files are saved by defult in `~/.config/.tsessions/`.
 
-## Acknowledgements
+## 🏆Acknowledgements
 
 - [tmuxinator](https://github.com/tmuxinator/tmuxinator)
 - [ThePrimeagen's tmux-sessionizer](https://github.com/ThePrimeagen/tmux-sessionizer)
