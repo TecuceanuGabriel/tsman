@@ -82,8 +82,9 @@ Example config:
 `~/.tmux.conf`:
 
 ```bash
-bind -r f run-shell "tmux neww 'tsman menu -p -a'" # with preview pane and
-                                                   # confirmation popup on
+# open menu in a tmux popup with preview pane and delete confirmation on
+# note: requires tmux v3.2+
+bind -r f display-popup -E -w 80% -h 80% "tsman menu -p -a"
 bind -r C-s run-shell "tsman save"
 ```
 
