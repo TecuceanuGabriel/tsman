@@ -2,8 +2,6 @@ use std::borrow::Cow;
 use std::env;
 use std::fs::write;
 use std::process::Command;
-use std::thread::sleep;
-use std::time::Duration;
 
 use anyhow::{Context, Result};
 use shell_escape::escape;
@@ -13,8 +11,6 @@ use crate::tmux::session::*;
 
 const TMUX_FIELD_SEPARATOR: &str = " ";
 const TMUX_LINE_SEPARATOR: &str = "\n";
-
-const ATTACH_DELAY: u64 = 700;
 
 pub fn get_session() -> Result<Session> {
     let (name, path) =
@@ -70,8 +66,6 @@ pub fn restore_session(session: &Session) -> Result<()> {
         .arg(script.path())
         .status()
         .context("Failed to reconstruct session")?;
-
-    sleep(Duration::from_millis(ATTACH_DELAY));
 
     attach_to_session(&session.name)
 }
