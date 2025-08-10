@@ -1,7 +1,14 @@
-# Tsman
+<div align="center">
+
+# tsman
 
 A lightweight Tmux session manager with fuzzy-finding (powered by
 [fuzzy-matcher](https://github.com/skim-rs/fuzzy-matcher)).
+
+[Features](#features) • [Installation](#installation) • [Usage](#usage) •
+[Configuration](#configuration)
+
+</div>
 
 ## ✨Features
 
