@@ -89,7 +89,7 @@ fn edit(session_name: Option<&str>) -> Result<()> {
 }
 
 fn delete(session_name: &str) -> Result<()> {
-    let path = get_config_file_path(&session_name)?;
+    let path = get_config_file_path(session_name)?;
     fs::remove_file(path)?;
     Ok(())
 }

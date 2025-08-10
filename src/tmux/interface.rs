@@ -38,7 +38,7 @@ pub fn restore_session(session: &Session) -> Result<()> {
     let first_window = &session.windows[0];
 
     script_str +=
-        &get_window_config_cmd(&temp_session_name, &session, &first_window)?;
+        &get_window_config_cmd(&temp_session_name, session, first_window)?;
 
     for window in session.windows.iter().skip(1) {
         script_str += &format!(
@@ -49,7 +49,7 @@ pub fn restore_session(session: &Session) -> Result<()> {
         );
 
         script_str +=
-            &get_window_config_cmd(&temp_session_name, session, &window)?;
+            &get_window_config_cmd(&temp_session_name, session, window)?;
     }
 
     // this helps avoid naming conflicts inside tmux
