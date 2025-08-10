@@ -176,7 +176,7 @@ fn get_windows() -> Result<Vec<Window>> {
     string_output
         .trim()
         .split(TMUX_LINE_SEPARATOR)
-        .map(|line| parse_window_string(line))
+        .map(parse_window_string)
         .collect()
 }
 
@@ -219,7 +219,7 @@ fn get_panes(window_id: &str) -> Result<Vec<Pane>> {
     string_output
         .trim()
         .split(TMUX_LINE_SEPARATOR)
-        .map(|line| parse_pane_string(line))
+        .map(parse_pane_string)
         .collect()
 }
 
