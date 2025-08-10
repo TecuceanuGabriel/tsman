@@ -30,13 +30,10 @@ impl Pane {
             preview += &format!("({}) ", self.index);
         }
 
-        preview += &format!(
-            "{}",
-            match self.current_command.as_ref() {
-                Some(cmd) => cmd,
-                None => "_",
-            }
-        );
+        preview += match self.current_command.as_ref() {
+            Some(cmd) => cmd,
+            None => "_",
+        };
 
         preview
     }
