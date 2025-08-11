@@ -12,13 +12,16 @@ A lightweight session manager for tmux
 [Features](#features) • [Installation](#installation) • [Usage](#usage) •
 [Configuration](#configuration)
 
+![Navigation](./assets/Navigation.gif)
+_Navigation_
+
+![Edit](./assets/Edit.gif)
+_Editing_
+
+![SaveDelete](./assets/SaveDelete.gif)
+_Save/Delete_
+
 </div>
-
-https://github.com/user-attachments/assets/9e36a79f-ed02-4414-adb1-c17beca52480
-
-https://github.com/user-attachments/assets/275ba88e-2369-41b3-86ad-e539329f3eed
-
-https://github.com/user-attachments/assets/0446d794-b779-49d3-a12a-b3c467373695
 
 ## ✨Features
 
