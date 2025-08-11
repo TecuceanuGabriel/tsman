@@ -295,6 +295,7 @@ impl MenuUi {
             Line::from("C-e   → Edit session"),
             Line::from("C-d   → Delete/kill"),
             Line::from("C-s   → Save session"),
+            Line::from("C-k   → Kill session"),
             Line::from("Enter → Open session"),
         ];
 
