@@ -198,7 +198,7 @@ fn parse_window_string(window: &str, session_name: &str) -> Result<Window> {
     match (parts.next(), parts.next(), parts.next()) {
         (Some(index), Some(name), Some(layout)) => {
             let index = index.to_string();
-            let window_target = format!("{}:{}", session_name, index);
+            let window_target = format!("{session_name}:{index}");
             let panes = get_panes(&window_target)?;
 
             Ok(Window {
