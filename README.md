@@ -90,6 +90,7 @@ Session actions:
 | `C-e`   | Edit config file of selected session   | -                      |
 | `C-d`   | Delete config file of selected session | Kill session           |
 | `C-s`   | -                                      | Save session           |
+| `C-k`   | Kill session                           | Kill session           |
 | `Enter` | Open session                           | Open session           |
 
 UI Controls:
