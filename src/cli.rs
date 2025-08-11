@@ -1,4 +1,7 @@
+use std::fmt;
+
 use clap::{Parser, Subcommand};
+use regex::Regex;
 
 #[derive(Debug, Parser)]
 #[command(name = "tsman")]
@@ -36,6 +39,7 @@ pub enum Commands {
     )]
     Save {
         /// Name of the session (default: name of current session)
+        #[arg(value_parser = validate_session_name)]
         session_name: Option<String>,
     },
 
@@ -47,6 +51,7 @@ pub enum Commands {
     )]
     Open {
         /// Name of the session
+        #[arg(value_parser = validate_session_name)]
         session_name: String,
     },
 
@@ -58,6 +63,7 @@ for manual editing.",
     )]
     Edit {
         /// Name of the session (default: name of current session)
+        #[arg(value_parser = validate_session_name)]
         session_name: Option<String>,
     },
 
@@ -70,6 +76,7 @@ config storage directory.",
     )]
     Delete {
         /// Name of the session
+        #[arg(value_parser = validate_session_name)]
         session_name: String,
     },
 
@@ -89,4 +96,27 @@ currently active sessions.",
         )]
         ask_for_confirmation: bool,
     },
+}
+
+#[derive(Debug)]
+struct SessionNameError(String);
+
+impl std::error::Error for SessionNameError {}
+
+impl fmt::Display for SessionNameError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+fn validate_session_name(name: &str) -> Result<String, SessionNameError> {
+    let re = Regex::new(r"^[a-zA-Z0-9_-]{1,30}$").unwrap();
+    if !re.is_match(name) {
+        Err(SessionNameError(
+            "Session name must be 1-30 characters long and only contain [a-zA-Z0-9_-]"
+                .into(),
+        ))
+    } else {
+        Ok(name.to_string())
+    }
 }

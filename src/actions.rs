@@ -9,7 +9,6 @@ use crate::tmux::interface::*;
 use crate::tmux::session::Session;
 
 use anyhow::{Context, Result};
-use regex::Regex;
 use shell_escape::escape;
 
 pub fn handle(args: Args) -> Result<()> {
@@ -30,7 +29,6 @@ fn save(session_name: Option<&str>) -> Result<()> {
         get_session().context("Failed to get current session")?;
 
     if let Some(name) = session_name {
-        validate_session_name(name)?;
         current_session.name = name.to_string();
     }
 
@@ -41,14 +39,6 @@ fn save(session_name: Option<&str>) -> Result<()> {
     save_session_config(&current_session.name, yaml)
         .context("Failed to save yaml config to disk")?;
 
-    Ok(())
-}
-
-fn validate_session_name(name: &str) -> Result<()> {
-    let re: Regex = Regex::new(r"^[a-zA-Z0-9_-]+$").unwrap();
-    if !re.is_match(name) {
-        anyhow::bail!("Invalid session name. Only [a-zA-Z0-9_-] allowed");
-    }
     Ok(())
 }
 
