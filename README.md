@@ -73,7 +73,7 @@ tsman menu --preview # open the menu with the preview pane on
 tsman menu --ask-for-confirmation # Open a confirmation popup when deleting
 ```
 
-#### ⌨️Menu keybindings:
+## ⌨️Menu keybindings:
 
 Navigation:
 
@@ -83,13 +83,6 @@ Navigation:
 | `Up arrow` / `C-p`   | Select previous item |
 | `Down arrow` / `C-n` | Select next item     |
 
-UI Controls:
-
-| command | action                                    |
-| ------- | ----------------------------------------- |
-| `C-t`   | Toggle the visibility of the preview pane |
-| `C-w`   | Delete last word from input               |
-
 Session actions:
 
 | command | saved session action                   | unsaved session action |
@@ -98,6 +91,27 @@ Session actions:
 | `C-d`   | Delete config file of selected session | Kill session           |
 | `C-s`   | -                                      | Save session           |
 | `Enter` | Open session                           | Open session           |
+
+UI Controls:
+
+| command | action                                    |
+| ------- | ----------------------------------------- |
+| `C-t`   | Toggle the visibility of the preview pane |
+| `C-h`   | Toggle the visibility of the help popup   |
+| `C-w`   | Delete last word from input               |
+
+Confirmation Popup:
+
+| command                 | action  |
+| ----------------------- | ------- |
+| `y` / `Y` / `Enter`     | Confirm |
+| `n` / `N` / `Esc` / `q` | Abort   |
+
+Help Popup:
+
+| command                               | action |
+| ------------------------------------- | ------ |
+| `C-h` / `C-c` / `Esc` / `q` / `Enter` | Close  |
 
 ## 🔧Configuration
 
@@ -133,7 +147,7 @@ export TSMAN_CONFIG_STORAGE_DIR="$HOME/mux-sessions"
 - `$EDITOR` must be set to use the edit command.
 - the session config files are saved by defult in `~/.config/.tsessions/`.
 
-## 🏆Acknowledgements
+## 🙏Acknowledgements
 
 - [tmuxinator](https://github.com/tmuxinator/tmuxinator)
 - [ThePrimeagen's tmux-sessionizer](https://github.com/ThePrimeagen/tmux-sessionizer)
