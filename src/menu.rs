@@ -73,11 +73,10 @@ pub struct MenuUi {
 
 impl fmt::Display for MenuItem {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.saved {
-            write!(f, "{}", self.name)
-        } else {
-            write!(f, "* {}", self.name)
-        }
+        let saved_indicator = if !self.saved { "* " } else { "" };
+        let active_indicator = if self.active { " (active)" } else { "" };
+
+        write!(f, "{}{}{}", saved_indicator, self.name, active_indicator)
     }
 }
 

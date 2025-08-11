@@ -12,10 +12,16 @@ use crate::tmux::session::*;
 const TMUX_FIELD_SEPARATOR: &str = " ";
 const TMUX_LINE_SEPARATOR: &str = "\n";
 
-pub fn get_session() -> Result<Session> {
-    let (name, path) =
-        get_session_info().context("Failed to get session info")?;
-    let windows = get_windows().context("Failed to get windows")?;
+pub fn get_session(session_name: Option<&str>) -> Result<Session> {
+    let name = if let Some(name) = session_name {
+        name.to_string()
+    } else {
+        get_session_name()?
+    };
+
+    let path = get_session_path(&name)?;
+
+    let windows = get_windows(&name).context("Failed to get windows")?;
 
     Ok(Session {
         name,
@@ -111,28 +117,18 @@ pub fn close_session(session_name: &str) -> Result<()> {
     Ok(())
 }
 
-pub fn get_session_info() -> Result<(String, String)> {
+pub fn get_session_name() -> Result<String> {
     let output = Command::new("tmux")
         .arg("display-message")
         .arg("-p")
-        .args(["-F", "#{session_name} #{session_path}"])
+        .args(["-F", "#{session_name}"])
         .output()
         .context("Failed to execute 'tmux display-message'")?;
 
     let string_output = String::from_utf8(output.stdout)
         .context("Failed to convert tmux output to UTF-8 string")?;
 
-    let mut parts = string_output.trim().split(" ");
-
-    match (parts.next(), parts.next()) {
-        (Some(session_name), Some(session_path)) => {
-            Ok((session_name.to_string(), session_path.to_string()))
-        }
-        _ => anyhow::bail!(
-            "Failed to parse session name and path from: '{}'",
-            string_output
-        ),
-    }
+    Ok(string_output.trim().to_string())
 }
 
 pub fn list_active_sessions() -> Result<Vec<String>> {
@@ -163,9 +159,25 @@ pub fn list_active_sessions() -> Result<Vec<String>> {
     Ok(parts)
 }
 
-fn get_windows() -> Result<Vec<Window>> {
+fn get_session_path(session_name: &str) -> Result<String> {
+    let output = Command::new("tmux")
+        .arg("display-message")
+        .arg("-p")
+        .args(["-t", session_name])
+        .args(["-F", "#{session_path}"])
+        .output()
+        .context("Failed to execute 'tmux display-message'")?;
+
+    let string_output = String::from_utf8(output.stdout)
+        .context("Failed to convert tmux output to UTF-8 string")?;
+
+    Ok(string_output.trim().to_string())
+}
+
+fn get_windows(session_name: &str) -> Result<Vec<Window>> {
     let output = Command::new("tmux")
         .arg("list-windows")
+        .args(["-t", session_name])
         .args(["-F", "#{window_index} #{window_name} #{window_layout}"])
         .output()
         .context("Failed to execute 'tmux list-windows'")?;
@@ -176,17 +188,18 @@ fn get_windows() -> Result<Vec<Window>> {
     string_output
         .trim()
         .split(TMUX_LINE_SEPARATOR)
-        .map(parse_window_string)
+        .map(|window| parse_window_string(window, session_name))
         .collect()
 }
 
-fn parse_window_string(window: &str) -> Result<Window> {
+fn parse_window_string(window: &str, session_name: &str) -> Result<Window> {
     let mut parts = window.split(" ");
 
     match (parts.next(), parts.next(), parts.next()) {
         (Some(index), Some(name), Some(layout)) => {
             let index = index.to_string();
-            let panes = get_panes(&index)?;
+            let window_target = format!("{}:{}", session_name, index);
+            let panes = get_panes(&window_target)?;
 
             Ok(Window {
                 index,
@@ -201,15 +214,15 @@ fn parse_window_string(window: &str) -> Result<Window> {
     }
 }
 
-fn get_panes(window_id: &str) -> Result<Vec<Pane>> {
+fn get_panes(window_target: &str) -> Result<Vec<Pane>> {
     let output = Command::new("tmux")
         .arg("list-panes")
-        .args(["-t", window_id])
+        .args(["-t", window_target])
         .args(["-F", "#{pane_index} #{pane_pid} #{pane_current_path}"])
         .output()
         .with_context(|| {
             format!(
-                "Failed to execute 'tmux list-panes' for window {window_id}",
+                "Failed to execute 'tmux list-panes' for window {window_target}",
             )
         })?;
 

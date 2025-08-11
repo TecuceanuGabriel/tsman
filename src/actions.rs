@@ -26,11 +26,25 @@ pub fn handle(args: Args) -> Result<()> {
 
 fn save(session_name: Option<&str>) -> Result<()> {
     let mut current_session =
-        get_session().context("Failed to get current session")?;
+        get_session(None).context("Failed to get current session")?;
 
     if let Some(name) = session_name {
         current_session.name = name.to_string();
     }
+
+    let yaml = serde_yaml::to_string(&current_session).with_context(|| {
+        format!("Failed to serialize session {current_session:#?} to yaml")
+    })?;
+
+    save_session_config(&current_session.name, yaml)
+        .context("Failed to save yaml config to disk")?;
+
+    Ok(())
+}
+
+fn save_target(session_name: &str) -> Result<()> {
+    let current_session = get_session(Some(session_name))
+        .context("Failed to get current session")?;
 
     let yaml = serde_yaml::to_string(&current_session).with_context(|| {
         format!("Failed to serialize session {current_session:#?} to yaml")
@@ -64,7 +78,7 @@ fn edit(session_name: Option<&str>) -> Result<()> {
     let path = if let Some(name) = session_name {
         get_config_file_path(name)?
     } else {
-        let (name, _) = get_session_info()?;
+        let name = get_session_name()?;
         get_config_file_path(&name)?
     };
 
@@ -95,7 +109,7 @@ fn menu(show_preview: bool, ask_for_confirmation: bool) -> Result<()> {
 
     while let Some(item) = menu_ui.dequeue_action()? {
         match item.action {
-            MenuAction::Save => save(Some(&item.selection))?,
+            MenuAction::Save => save_target(&item.selection)?,
             MenuAction::Open => open(&item.selection)?,
             MenuAction::Edit => edit(Some(&item.selection))?,
             MenuAction::Delete => delete(&item.selection)?,
