@@ -416,6 +416,7 @@ impl MenuUi {
                         self.handle_delete();
                     }
                 }
+                KeyCode::Char('k') => self.handle_kill(),
                 KeyCode::Char('c') => self.exit = true,
                 KeyCode::Char('t') => self.show_preview = !self.show_preview,
                 KeyCode::Char('h') => self.show_help = !self.show_help,
@@ -493,6 +494,28 @@ impl MenuUi {
             if !selection.saved {
                 self.enqueue_action(MenuAction::Save);
                 self.update_menu_item(&selection.name, Some(true), None);
+                self.update_filter();
+            }
+        }
+    }
+
+    fn handle_kill(&mut self) {
+        if let Some(selection_idx) = self.list_state.selected() {
+            let selection = match self.filtered_items.get(selection_idx) {
+                Some(s) => s.clone(),
+                None => return,
+            };
+
+            if selection.active {
+                self.enqueue_action(MenuAction::Close);
+                self.update_menu_item(&selection.name, None, Some(false));
+
+                if !selection.saved {
+                    self.all_items.retain(|item| item.name != selection.name);
+                    self.list_state
+                        .select(Some(selection_idx.saturating_sub(1)));
+                }
+
                 self.update_filter();
             }
         }
