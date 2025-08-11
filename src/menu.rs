@@ -390,11 +390,8 @@ impl MenuUi {
 
         if self.show_help {
             if key.modifiers.contains(KeyModifiers::CONTROL) {
-                match key.code {
-                    KeyCode::Char('h' | 'c') => {
-                        self.show_help = !self.show_help
-                    }
-                    _ => {}
+                if let KeyCode::Char('h' | 'c') = key.code {
+                    self.show_help = !self.show_help
                 }
             } else {
                 match key.code {
