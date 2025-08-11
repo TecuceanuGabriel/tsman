@@ -199,15 +199,15 @@ impl MenuUi {
             }),
         );
 
-        if self.show_preview {
-            self.draw_preview_pane(frame, content_chunks[1]);
-        }
-
         let help_hint = Paragraph::new("C-h: Help | Esc: Quit")
             .alignment(Alignment::Center)
             .style(Style::default().fg(Color::DarkGray));
 
         frame.render_widget(help_hint, main_chunks[1]);
+
+        if self.show_preview {
+            self.draw_preview_pane(frame, content_chunks[1]);
+        }
 
         if self.ask_for_confirmation && self.show_confirmation_popup {
             MenuUi::draw_confirmation_popup(frame);
@@ -264,6 +264,8 @@ impl MenuUi {
 
     fn draw_help_popup(f: &mut Frame) {
         let popup_area = MenuUi::create_centered_rect(f.area(), 60, 14);
+
+        f.render_widget(Clear, popup_area);
 
         let navigation_block = Block::default()
             .title("Navigation")
