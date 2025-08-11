@@ -14,6 +14,12 @@ A lightweight session manager for tmux
 
 </div>
 
+https://github.com/user-attachments/assets/9e36a79f-ed02-4414-adb1-c17beca52480
+
+https://github.com/user-attachments/assets/275ba88e-2369-41b3-86ad-e539329f3eed
+
+https://github.com/user-attachments/assets/0446d794-b779-49d3-a12a-b3c467373695
+
 ## ✨Features
 
 - Quickly save/restore/delete tmux sessions.
