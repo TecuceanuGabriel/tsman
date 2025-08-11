@@ -31,7 +31,8 @@ pub enum Commands {
         about = "Save the current session",
         long_about = "Save the currently attached tmux session. Stores the 
 <session_name>.yaml config file in $TSMAN_CONFIG_STORAGE_DIR if set, or 
-~/.config/.tsessions."
+~/.config/.tsessions.",
+        alias = "s"
     )]
     Save {
         /// Name of the session (default: name of current session)
@@ -41,7 +42,8 @@ pub enum Commands {
     #[command(
         about = "Open the specified session",
         long_about = "Restore the selected session and then attach to it.",
-        arg_required_else_help = true
+        arg_required_else_help = true,
+        alias = "o"
     )]
     Open {
         /// Name of the session
@@ -51,7 +53,8 @@ pub enum Commands {
     #[command(
         about = "Edit the specified session",
         long_about = "Open the config file of the specified session in $EDITOR
-for manual editing."
+for manual editing.",
+        alias = "e"
     )]
     Edit {
         /// Name of the session (default: name of current session)
@@ -62,7 +65,8 @@ for manual editing."
         about = "Delete specified session",
         long_about = "Remove the config file of the specified session from the
 config storage directory.",
-        arg_required_else_help = true
+        arg_required_else_help = true,
+        alias = "d"
     )]
     Delete {
         /// Name of the session
@@ -72,7 +76,8 @@ config storage directory.",
     #[command(
         about = "Open up a menu containing all sessions",
         long_about = "Open up an interactive menu containing all saved or 
-currently active sessions."
+currently active sessions.",
+        alias = "m"
     )]
     Menu {
         #[clap(long, short, help = "Show preview pane on start up")]
