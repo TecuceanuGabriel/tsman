@@ -1,3 +1,7 @@
+//! Tmux session model
+//!
+//! Serializable data structures representing the hierarchy of a tmux session
+//! [`Session`] -> [`Window`] -> [`Pane`]
 use serde::{Deserialize, Serialize};
 
 /// Represents a tmux pane that lives inside a tmux window.
@@ -39,11 +43,9 @@ impl Pane {
     /// Returns a textual preview of the pane.
     ///
     /// # Arguments
-    ///
     /// * `show_index` - Whether to include the pane index in the preview.
     ///
     /// # Example
-    ///
     /// ```
     /// let pane = Pane {
     ///     index: "0".into(),
@@ -72,7 +74,6 @@ impl Window {
     /// Returns a textual preview of the window and its panes.
     ///
     /// # Arguments
-    ///
     /// * `add_connector` - Whether to draw a connector line before panes.
     ///
     /// This method formats the window name, followed by each pane preview,

@@ -1,3 +1,4 @@
+//! TUI menu
 use std::{
     collections::VecDeque,
     fmt,

@@ -1,3 +1,7 @@
+//! Command dispatcher for `tsman` CLI.
+//!
+//! This module takes parsed CLI arguments and executes the corresponding
+//! tmux session management action.
 use std::collections::HashSet;
 use std::fs;
 use std::process::Command;

@@ -1,3 +1,4 @@
+//! CLI argument parser
 use std::fmt;
 
 use clap::{Parser, Subcommand};

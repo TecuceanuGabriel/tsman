@@ -1,3 +1,7 @@
+//! API for interacting with the disk
+//!
+//! This module contains functions for interacting with the tsman session
+//! storage directory.
 use std::path::PathBuf;
 use std::{env, fs};
 

@@ -1,3 +1,7 @@
+//! API to interact with tmux
+//!
+//! This module contains functions used to get information/interact with tmux
+//! sessions using [`std::process::Command`].
 use std::borrow::Cow;
 use std::env;
 use std::fs::write;
@@ -16,16 +20,13 @@ const TMUX_LINE_SEPARATOR: &str = "\n";
 /// not provided.
 ///
 /// # Arguments
-///
 /// *  `session_name` - name of the tmux session to retrive (optional). If
 /// `None`, uses [`get_session_name`] to detect the current session.
 ///
 /// # Returns
-///
 /// A fully populated [`Session`] struct.
 ///
 /// # Errors
-///
 /// Returns an error if:
 /// - The session cannot be determined/there is no attached session.
 /// - Any tmux command used to gather details fails
@@ -49,7 +50,7 @@ pub fn get_session(session_name: Option<&str>) -> Result<Session> {
 
 /// Restores a tmux session from a [`Session`] struct.
 ///
-/// Creates a temporary session, populates it with windows and panes, then 
+/// Creates a temporary session, populates it with windows and panes, then
 /// renames it to the target name to avoid naming conflicts.
 ///
 /// # Arguments
@@ -65,7 +66,7 @@ pub fn get_session(session_name: Option<&str>) -> Result<Session> {
 /// 4. Attach to the restored session.
 ///
 /// # Errors
-/// Returns an error if any tmux command fails, or if writing the temporary 
+/// Returns an error if any tmux command fails, or if writing the temporary
 /// restoration script fails.
 pub fn restore_session(session: &Session) -> Result<()> {
     let temp_session_name = format!("tsman-temp-{}", std::process::id());
