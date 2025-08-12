@@ -1,3 +1,4 @@
+//! TUI menu
 use std::{
     collections::VecDeque,
     fmt,
@@ -30,45 +31,60 @@ use anyhow::Result;
 use crate::persistence::load_session_from_config;
 use crate::tmux::session::Session;
 
+/// Represents the different actions that can be triggered from the menu.
 #[derive(Debug, Clone, PartialEq)]
 pub enum MenuAction {
+    /// Save the selected session to disk.
     Save,
+    /// Open the selected session.
     Open,
+    /// Open the selected session config in $EDITOR.
     Edit,
+    /// Delete the selected session from disk.
     Delete,
+    /// Close the selected active session without deleting it.
     Close,
 }
 
+/// An action queued to be executed after the menu exits.
 #[derive(Debug)]
 pub struct MenuActionItem {
+    /// The name of the selected session.
     pub selection: String,
+    /// The action to be performed on it.
     pub action: MenuAction,
 }
 
+/// A single item in the menu list.
 #[derive(Debug, Clone)]
 pub struct MenuItem {
+    /// The session name.
     name: String,
+    /// Whether this session is saved to disk.
     saved: bool,
+    /// Whether this session is currently active.
     active: bool,
 }
 
+/// Menu state.
 pub struct MenuUi {
+    /// List of all items in the menu.
     all_items: Vec<MenuItem>,
+    /// List of filtered items using fuzzy-matcher based on the input.
     filtered_items: Vec<MenuItem>,
+    /// Input used for filtering.
     input: String,
-
-    list_state: ListState,
-    matcher: SkimMatcherV2,
-
+    /// Queu of actions to be executed after the menu closes.
     action_queue: VecDeque<MenuActionItem>,
 
     ask_for_confirmation: bool,
-
     show_confirmation_popup: bool,
     show_preview: bool,
     show_help: bool,
-
     exit: bool,
+
+    list_state: ListState,
+    matcher: SkimMatcherV2,
 }
 
 impl fmt::Display for MenuItem {
@@ -81,6 +97,12 @@ impl fmt::Display for MenuItem {
 }
 
 impl MenuItem {
+    /// Creates a new menu item.
+    ///
+    /// # Arguments
+    /// * `name` - The session name.
+    /// * `saved` - Whether the session is saved to storage.
+    /// * `active` - Whether the session is currently active.
     pub fn new(name: String, saved: bool, active: bool) -> Self {
         Self {
             name,
@@ -107,6 +129,14 @@ impl fmt::Debug for MenuUi {
 }
 
 impl MenuUi {
+    /// Creates a new [`MenuUi`] instance.
+    ///
+    /// # Arguments
+    ///
+    /// * `items` - The list of menu items to display.
+    /// * `show_preview` - Whether to show the preview pane.
+    /// * `ask_for_confirmation` - Whether to require confirmation before
+    ///   deleting.
     pub fn new(
         items: Vec<MenuItem>,
         show_preview: bool,
@@ -130,6 +160,11 @@ impl MenuUi {
         }
     }
 
+    /// Runs the menu loop until the user exits.
+    ///
+    /// # Arguments
+    ///
+    /// * `terminal` - The terminal backend to draw on.
     pub fn run(&mut self, terminal: &mut DefaultTerminal) -> Result<()> {
         while !self.exit {
             terminal.draw(|frame| self.draw(frame))?;
@@ -139,6 +174,7 @@ impl MenuUi {
         Ok(())
     }
 
+    /// Retrieves and removes the next queued action, if any.
     pub fn dequeue_action(&mut self) -> Result<Option<MenuActionItem>> {
         Ok(self.action_queue.pop_front())
     }
@@ -609,6 +645,9 @@ impl MenuUi {
     }
 }
 
+/// Initializes the terminal in raw mode and alternate screen.
+///
+/// Returns a [`DefaultTerminal`] that must later be passed to [`restore`].
 pub fn init() -> Result<DefaultTerminal> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -618,6 +657,7 @@ pub fn init() -> Result<DefaultTerminal> {
     Ok(terminal)
 }
 
+/// Restores the terminal to its normal mode and leaves the alternate screen.
 pub fn restore(mut terminal: DefaultTerminal) -> Result<()> {
     disable_raw_mode()?;
     execute!(terminal.backend_mut(), LeaveAlternateScreen)?;

@@ -4,9 +4,9 @@ All contributions are welcomed!
 
 ## Creating issues
 
-- before creating a new issue make sure one doesn't allready exit.
+- before creating a new issue make sure one doesn't allready exist
 - use one of the provided templates depending on the issue type
-  (bug report/feature request).
+  (bug report/feature request)
 
 ## Making a patch
 
