@@ -3,6 +3,7 @@ use std::fmt;
 use clap::{Parser, Subcommand};
 use regex::Regex;
 
+/// Command-line argument parser for `tsman`.
 #[derive(Debug, Parser)]
 #[command(name = "tsman")]
 #[command(
@@ -28,6 +29,10 @@ pub struct Args {
     pub command: Commands,
 }
 
+/// CLI subcommands for `tsman`.
+///
+/// Each variant corresponds to an action that can be performed on `tmux`
+/// sessions.
 #[derive(Debug, Subcommand)]
 pub enum Commands {
     #[command(
@@ -98,6 +103,7 @@ currently active sessions.",
     },
 }
 
+/// Error type returned when a session name is invalid.
 #[derive(Debug)]
 struct SessionNameError(String);
 
@@ -109,6 +115,22 @@ impl fmt::Display for SessionNameError {
     }
 }
 
+/// Validates a session name according to the rules:
+///
+/// - Must be between 1 and 30 characters long.
+/// - Can only contain alphanumeric characters, underscores (`_`),
+/// and hyphens (`-`).
+///
+/// # Errors
+///
+/// Returns a [`SessionNameError`] if the name is invalid.
+///
+/// # Examples
+/// ```
+/// # use tsman::validate_session_name;
+/// assert!(validate_session_name("valid_name-123").is_ok());
+/// assert!(validate_session_name("invalid name").is_err());
+/// ```
 fn validate_session_name(name: &str) -> Result<String, SessionNameError> {
     let re = Regex::new(r"^[a-zA-Z0-9_-]{1,30}$").unwrap();
     if !re.is_match(name) {
