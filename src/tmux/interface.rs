@@ -20,8 +20,8 @@ const TMUX_LINE_SEPARATOR: &str = "\n";
 /// not provided.
 ///
 /// # Arguments
-/// *  `session_name` - name of the tmux session to retrive (optional). If
-/// `None`, uses [`get_session_name`] to detect the current session.
+/// * `session_name` - name of the tmux session to retrive (optional). If
+///   `None`, uses [`get_session_name`] to detect the current session.
 ///
 /// # Returns
 /// A fully populated [`Session`] struct.

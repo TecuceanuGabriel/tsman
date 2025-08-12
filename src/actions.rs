@@ -131,7 +131,7 @@ fn open(session_name: &str) -> Result<()> {
 /// # Arguments
 ///
 /// * `session_name` – Optional name of the session to edit. If omitted, edits
-/// the current active session.
+///   the current active session.
 ///
 /// # Errors
 /// Returns an error if:

@@ -120,7 +120,7 @@ impl fmt::Display for SessionNameError {
 ///
 /// - Must be between 1 and 30 characters long.
 /// - Can only contain alphanumeric characters, underscores (`_`),
-/// and hyphens (`-`).
+///   and hyphens (`-`).
 ///
 /// # Errors
 ///

@@ -136,7 +136,7 @@ impl MenuUi {
     /// * `items` - The list of menu items to display.
     /// * `show_preview` - Whether to show the preview pane.
     /// * `ask_for_confirmation` - Whether to require confirmation before
-    ///    deleting.
+    ///   deleting.
     pub fn new(
         items: Vec<MenuItem>,
         show_preview: bool,
