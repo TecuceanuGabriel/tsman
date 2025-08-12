@@ -17,10 +17,10 @@ A lightweight session manager for tmux
 _Navigation_
 
 ![Edit](./assets/Edit.gif)
-_Editing_
+_Edit_
 
-![SaveDelete](./assets/SaveDelete.gif)
-_Save/Delete_
+![DeleteSave](./assets/DeleteSave.gif)
+_Delete/Save_
 
 </div>
 
