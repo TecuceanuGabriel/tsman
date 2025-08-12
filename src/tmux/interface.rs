@@ -12,6 +12,23 @@ use crate::tmux::session::*;
 const TMUX_FIELD_SEPARATOR: &str = " ";
 const TMUX_LINE_SEPARATOR: &str = "\n";
 
+/// Retrives a [`Session`] by name, or infer the current session if a name is
+/// not provided.
+///
+/// # Arguments
+///
+/// *  `session_name` - name of the tmux session to retrive (optional). If
+/// `None`, uses [`get_session_name`] to detect the current session.
+///
+/// # Returns
+///
+/// A fully populated [`Session`] struct.
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The session cannot be determined/there is no attached session.
+/// - Any tmux command used to gather details fails
 pub fn get_session(session_name: Option<&str>) -> Result<Session> {
     let name = if let Some(name) = session_name {
         name.to_string()
@@ -30,6 +47,26 @@ pub fn get_session(session_name: Option<&str>) -> Result<Session> {
     })
 }
 
+/// Restores a tmux session from a [`Session`] struct.
+///
+/// Creates a temporary session, populates it with windows and panes, then 
+/// renames it to the target name to avoid naming conflicts.
+///
+/// # Arguments
+/// * `session` – The [`Session`] to restore.
+///
+/// # Process
+/// 1. Create a temporary session.
+/// 2. Create windows:
+///     - Create panes
+///     - Restore layout
+///     - Change into work dir and run commands
+/// 3. Rename the temporary session to the target name.
+/// 4. Attach to the restored session.
+///
+/// # Errors
+/// Returns an error if any tmux command fails, or if writing the temporary 
+/// restoration script fails.
 pub fn restore_session(session: &Session) -> Result<()> {
     let temp_session_name = format!("tsman-temp-{}", std::process::id());
 
@@ -76,6 +113,16 @@ pub fn restore_session(session: &Session) -> Result<()> {
     attach_to_session(&session.name)
 }
 
+/// Checks if a tmux session is currently active.
+///
+/// # Arguments
+/// * `session_name` – The name of the tmux session.
+///
+/// # Returns
+/// `Ok(true)` if the session exists, `Ok(false)` otherwise.
+///
+/// # Errors
+/// Returns an error if the `tmux list-session` command fails.
 pub fn is_active_session(session_name: &str) -> Result<bool> {
     let output = Command::new("tmux")
         .arg("list-session")
@@ -90,6 +137,16 @@ pub fn is_active_session(session_name: &str) -> Result<bool> {
     Ok(session_names.contains(&session_name))
 }
 
+/// Attaches to or switches to a tmux session.
+///
+/// If already inside tmux, uses `switch-client`.  
+/// If outside, uses `attach-session`.
+///
+/// # Arguments
+/// * `session_name` – The session name to attach to.
+///
+/// # Errors
+/// Returns an error if the tmux attach/switch command fails.
 pub fn attach_to_session(session_name: &str) -> Result<()> {
     let is_attached = env::var("TMUX").is_ok();
     let attach_cmd = if is_attached {
@@ -107,6 +164,13 @@ pub fn attach_to_session(session_name: &str) -> Result<()> {
     Ok(())
 }
 
+/// Closes a tmux session by name.
+///
+/// # Arguments
+/// * `session_name` – The session to kill.
+///
+/// # Errors
+/// Returns an error if `tmux kill-session` fails.
 pub fn close_session(session_name: &str) -> Result<()> {
     Command::new("tmux")
         .arg("kill-session")
@@ -117,6 +181,13 @@ pub fn close_session(session_name: &str) -> Result<()> {
     Ok(())
 }
 
+/// Gets the name of the current tmux session.
+///
+/// # Returns
+/// The current session name as a `String`.
+///
+/// # Errors
+/// Returns an error if tmux fails to execute or output parsing fails.
 pub fn get_session_name() -> Result<String> {
     let output = Command::new("tmux")
         .arg("display-message")
@@ -131,6 +202,16 @@ pub fn get_session_name() -> Result<String> {
     Ok(string_output.trim().to_string())
 }
 
+/// Lists all currently active tmux sessions.
+///
+/// # Returns
+/// A vector of session names.
+///
+/// # Behavior
+/// If the tmux server is not running, returns an empty vector.
+///
+/// # Errors
+/// Returns an error if tmux commands fail.
 pub fn list_active_sessions() -> Result<Vec<String>> {
     let status = Command::new("tmux")
         .arg("has-session")
@@ -159,6 +240,13 @@ pub fn list_active_sessions() -> Result<Vec<String>> {
     Ok(parts)
 }
 
+/// Retrieves the working directory path of a tmux session.
+///
+/// # Arguments
+/// * `session_name` – Name of the tmux session.
+///
+/// # Errors
+/// Returns an error if tmux command execution or parsing fails.
 fn get_session_path(session_name: &str) -> Result<String> {
     let output = Command::new("tmux")
         .arg("display-message")
@@ -174,6 +262,16 @@ fn get_session_path(session_name: &str) -> Result<String> {
     Ok(string_output.trim().to_string())
 }
 
+/// Retrieves all windows of a tmux session.
+///
+/// # Arguments
+/// * `session_name` – The tmux session name.
+///
+/// # Returns
+/// A vector of [`Window`] structs.
+///
+/// # Errors
+/// Returns an error if `tmux list-windows` fails or parsing fails.
 fn get_windows(session_name: &str) -> Result<Vec<Window>> {
     let output = Command::new("tmux")
         .arg("list-windows")
@@ -192,6 +290,13 @@ fn get_windows(session_name: &str) -> Result<Vec<Window>> {
         .collect()
 }
 
+/// Parses a single tmux window info string into a [`Window`] struct.
+///
+/// # Format
+/// `"INDEX NAME LAYOUT"`
+///
+/// # Errors
+/// Returns an error if the format is invalid or if panes cannot be retrieved.
 fn parse_window_string(window: &str, session_name: &str) -> Result<Window> {
     let mut parts = window.split(" ");
 
@@ -214,6 +319,16 @@ fn parse_window_string(window: &str, session_name: &str) -> Result<Window> {
     }
 }
 
+/// Retrieves all panes for a given tmux window.
+///
+/// # Arguments
+/// * `window_target` – Format: `"SESSION:WINDOW_INDEX"`.
+///
+/// # Returns
+/// A vector of [`Pane`] structs.
+///
+/// # Errors
+/// Returns an error if tmux fails or parsing fails.
 fn get_panes(window_target: &str) -> Result<Vec<Pane>> {
     let output = Command::new("tmux")
         .arg("list-panes")
@@ -236,6 +351,16 @@ fn get_panes(window_target: &str) -> Result<Vec<Pane>> {
         .collect()
 }
 
+/// Parses a pane information string into a [`Pane`] struct.
+///
+/// # Format
+/// `"INDEX PID WORK_DIR"`
+///
+/// # Behavior
+/// Attempts to detect the currently running foreground process inside the pane.
+///
+/// # Errors
+/// Returns an error if parsing fails or process lookup fails.
 fn parse_pane_string(pane: &str) -> Result<Pane> {
     let mut parts = pane.split(TMUX_FIELD_SEPARATOR);
 
@@ -260,10 +385,27 @@ fn parse_pane_string(pane: &str) -> Result<Pane> {
     }
 }
 
+/// Retrieves the first child process of a shell process.
+///
+/// # Arguments
+/// * `shell_pid` – PID of the shell process.
+///
+/// # Returns
+/// The PID and command line of the first child process, if any.
 fn get_foreground_process(shell_pid: &str) -> Result<Option<(u32, String)>> {
     Ok(get_process_children(shell_pid)?.into_iter().next())
 }
 
+/// Lists the immediate child processes of a given PID.
+///
+/// # Arguments
+/// * `shell_pid` – Parent process PID.
+///
+/// # Returns
+/// A vector of `(PID, command_line)` tuples.
+///
+/// # Errors
+/// Returns an error if the `ps` command fails or parsing fails.
 fn get_process_children(shell_pid: &str) -> Result<Vec<(u32, String)>> {
     let output = Command::new("ps")
         .args(["-o", "pid=,args="])
@@ -292,6 +434,18 @@ fn get_process_children(shell_pid: &str) -> Result<Vec<(u32, String)>> {
     Ok(children)
 }
 
+/// Builds tmux commands to configure a window's panes, layout, and commands.
+///
+/// # Arguments
+/// * `temp_session_name` – Temporary session name during restore.
+/// * `session` – Full session data.
+/// * `window` – Window data to restore.
+///
+/// # Returns
+/// A string containing tmux commands.
+///
+/// # Errors
+/// Returns an error if escaping paths or commands fails.
 fn get_window_config_cmd(
     temp_session_name: &str,
     session: &Session,
