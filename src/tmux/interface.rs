@@ -283,9 +283,10 @@ fn get_process_children(shell_pid: &str) -> Result<Vec<(u32, String)>> {
             continue;
         }
         if let Some((pid_str, cmdline)) = trimmed.split_once(' ')
-            && let Ok(pid) = pid_str.trim().parse::<u32>() {
-                children.push((pid, cmdline.trim().to_string()));
-            }
+            && let Ok(pid) = pid_str.trim().parse::<u32>()
+        {
+            children.push((pid, cmdline.trim().to_string()));
+        }
     }
 
     Ok(children)

@@ -221,13 +221,12 @@ impl MenuUi {
     fn generate_preview_content(&self) -> String {
         if let Some(selection_idx) = self.list_state.selected()
             && let Some(selection) = self.filtered_items.get(selection_idx)
-                && let Ok(session_str) =
-                    load_session_from_config(&selection.name)
-                {
-                    let session: Session =
-                        serde_yaml::from_str(&session_str).ok().unwrap();
-                    return session.get_preview();
-                }
+            && let Ok(session_str) = load_session_from_config(&selection.name)
+        {
+            let session: Session =
+                serde_yaml::from_str(&session_str).ok().unwrap();
+            return session.get_preview();
+        }
 
         "".to_string()
     }
@@ -361,9 +360,10 @@ impl MenuUi {
 
     fn handle_events(&mut self) -> Result<()> {
         if event::poll(Duration::from_millis(50))?
-            && let Event::Key(key) = event::read()? {
-                self.handle_key_event(key);
-            }
+            && let Event::Key(key) = event::read()?
+        {
+            self.handle_key_event(key);
+        }
 
         Ok(())
     }
@@ -539,19 +539,20 @@ impl MenuUi {
 
     fn enqueue_action(&mut self, action: MenuAction) {
         if let Some(selection_idx) = self.list_state.selected()
-            && let Some(selection) = self.filtered_items.get(selection_idx) {
-                if action != MenuAction::Delete
-                    && action != MenuAction::Close
-                    && action != MenuAction::Save
-                {
-                    self.exit = true;
-                }
-
-                self.action_queue.push_back(MenuActionItem {
-                    selection: selection.name.clone(),
-                    action,
-                });
+            && let Some(selection) = self.filtered_items.get(selection_idx)
+        {
+            if action != MenuAction::Delete
+                && action != MenuAction::Close
+                && action != MenuAction::Save
+            {
+                self.exit = true;
             }
+
+            self.action_queue.push_back(MenuActionItem {
+                selection: selection.name.clone(),
+                action,
+            });
+        }
     }
 
     fn update_filter_and_reset(&mut self) {
