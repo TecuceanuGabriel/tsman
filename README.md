@@ -4,9 +4,10 @@
 
 A lightweight session manager for tmux
 
+[![CI Status](https://github.com/your-username/tsman/actions/workflows/rust-ci.yml/badge.svg)](https://github.com/TecuceanuGabriel/tsman/actions)
 [![Crates.io](https://img.shields.io/crates/v/tsman?logo=rust)](https://crates.io/crates/tsman)
 [![Downloads](https://img.shields.io/crates/d/tsman?color=blue)](https://crates.io/crates/tsman)
-[![tmux](https://img.shields.io/badge/tmux-%3E%3Dv3.2-1BB91F?logo=tmux)](https://github.com/tmux/tmux)
+[![Tmux](https://img.shields.io/badge/tmux-%3E%3Dv3.2-1BB91F?logo=tmux)](https://github.com/tmux/tmux)
 [![License](https://img.shields.io/badge/License-MIT-orange)](LICENSE)
 
 [Features](#features) • [Installation](#installation) • [Usage](#usage) •
