@@ -132,7 +132,6 @@ impl MenuUi {
     /// Creates a new [`MenuUi`] instance.
     ///
     /// # Arguments
-    ///
     /// * `items` - The list of menu items to display.
     /// * `show_preview` - Whether to show the preview pane.
     /// * `ask_for_confirmation` - Whether to require confirmation before
@@ -163,7 +162,6 @@ impl MenuUi {
     /// Runs the menu loop until the user exits.
     ///
     /// # Arguments
-    ///
     /// * `terminal` - The terminal backend to draw on.
     pub fn run(&mut self, terminal: &mut DefaultTerminal) -> Result<()> {
         while !self.exit {
@@ -208,16 +206,29 @@ impl MenuUi {
             .constraints([Constraint::Min(3), Constraint::Length(3)])
             .split(content_chunks[0]);
 
-        let items = self.filtered_items.iter().map(|s| s.to_string());
-        let list = List::new(items)
-            .block(Block::default().borders(Borders::ALL).title("Results"))
-            .highlight_style(Style::default().bg(Color::Blue));
+        let results_block =
+            Block::default().borders(Borders::ALL).title("Results");
+        let items: Vec<String> =
+            self.filtered_items.iter().map(|s| s.to_string()).collect();
 
-        frame.render_stateful_widget(
-            list,
-            left_content[0],
-            &mut self.list_state,
-        );
+        if items.is_empty() {
+            frame.render_widget(
+                Paragraph::new("No active/saved sessions available...")
+                    .block(results_block)
+                    .style(Style::default().fg(Color::DarkGray)),
+                left_content[0],
+            );
+        } else {
+            let list = List::new(items)
+                .block(results_block)
+                .highlight_style(Style::default().bg(Color::Blue));
+
+            frame.render_stateful_widget(
+                list,
+                left_content[0],
+                &mut self.list_state,
+            );
+        }
 
         let input_block =
             Block::default().borders(Borders::ALL).title("Search");
