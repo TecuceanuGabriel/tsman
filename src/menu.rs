@@ -213,7 +213,7 @@ impl MenuUi {
 
         if items.is_empty() {
             frame.render_widget(
-                Paragraph::new("No active/saved sessions available...")
+                Paragraph::new("No results...")
                     .block(results_block)
                     .style(Style::default().fg(Color::DarkGray)),
                 left_content[0],
