@@ -375,21 +375,21 @@ impl MenuUi {
         if event::poll(Duration::from_millis(50))?
             && let Event::Key(key) = event::read()?
         {
-            self.handle_key_event(key);
+            self.handle_key_event(key)?;
         }
 
         Ok(())
     }
 
-    fn handle_key_event(&mut self, key: KeyEvent) {
+    fn handle_key_event(&mut self, key: KeyEvent) -> Result<()> {
         if key.kind != KeyEventKind::Press {
-            return;
+            return Ok(());
         }
 
         if self.show_confirmation_popup {
             match key.code {
                 KeyCode::Char('y' | 'Y') | KeyCode::Enter => {
-                    self.handle_delete();
+                    self.handle_delete()?;
                     self.show_confirmation_popup = false;
                 }
                 KeyCode::Char('n' | 'N' | 'q') | KeyCode::Esc => {
@@ -397,7 +397,7 @@ impl MenuUi {
                 }
                 _ => {}
             }
-            return;
+            return Ok(());
         }
 
         if self.show_help {
@@ -413,23 +413,23 @@ impl MenuUi {
                     _ => {}
                 }
             }
-            return;
+            return Ok(());
         }
 
         if key.modifiers.contains(KeyModifiers::CONTROL) {
             match key.code {
                 KeyCode::Char('p') => self.move_selection(-1),
                 KeyCode::Char('n') => self.move_selection(1),
-                KeyCode::Char('e') => self.handle_edit(),
-                KeyCode::Char('s') => self.handle_save(),
+                KeyCode::Char('e') => self.handle_edit()?,
+                KeyCode::Char('s') => self.handle_save()?,
                 KeyCode::Char('d') => {
                     if self.ask_for_confirmation {
                         self.show_confirmation_popup = true;
                     } else {
-                        self.handle_delete();
+                        self.handle_delete()?;
                     }
                 }
-                KeyCode::Char('k') => self.handle_kill(),
+                KeyCode::Char('k') => self.handle_kill()?,
                 KeyCode::Char('c') => self.exit = true,
                 KeyCode::Char('t') => self.show_preview = !self.show_preview,
                 KeyCode::Char('h') => self.show_help = !self.show_help,
@@ -450,37 +450,41 @@ impl MenuUi {
                 }
                 KeyCode::Up => self.move_selection(-1),
                 KeyCode::Down => self.move_selection(1),
-                KeyCode::Enter => self.handle_open(),
+                KeyCode::Enter => self.handle_open()?,
                 KeyCode::Esc => self.exit = true,
                 _ => {}
             }
         }
+
+        Ok(())
     }
 
-    fn handle_open(&mut self) {
+    fn handle_open(&mut self) -> Result<()> {
         if let Some(selection_idx) = self.list_state.selected() {
             let selection = match self.filtered_items.get(selection_idx) {
                 Some(s) => s.clone(),
-                None => return,
+                None => return Ok(()),
             };
 
-            actions::open(&selection.name);
+            actions::open(&selection.name)?;
             self.exit = true;
         }
+
+        Ok(())
     }
 
-    fn handle_delete(&mut self) {
+    fn handle_delete(&mut self) -> Result<()> {
         if let Some(selection_idx) = self.list_state.selected() {
             let selection = match self.filtered_items.get(selection_idx) {
                 Some(s) => s.clone(),
-                None => return,
+                None => return Ok(()),
             };
 
             if selection.saved {
-                actions::delete(&selection.name);
+                actions::delete(&selection.name)?;
                 self.update_menu_item(&selection.name, Some(false), None);
             } else {
-                tmux::interface::close_session(&selection.name);
+                tmux::interface::close_session(&selection.name)?;
                 self.update_menu_item(&selection.name, None, Some(false));
             }
 
@@ -494,45 +498,51 @@ impl MenuUi {
 
             self.update_filter();
         }
+
+        Ok(())
     }
 
-    fn handle_edit(&mut self) {
+    fn handle_edit(&mut self) -> Result<()> {
         if let Some(selection_idx) = self.list_state.selected() {
             let selection = match self.filtered_items.get(selection_idx) {
                 Some(s) => s.clone(),
-                None => return,
+                None => return Ok(()),
             };
 
             if selection.saved {
-                actions::edit(Some(&selection.name));
+                actions::edit(Some(&selection.name))?;
             }
         }
+
+        Ok(())
     }
 
-    fn handle_save(&mut self) {
+    fn handle_save(&mut self) -> Result<()> {
         if let Some(selection_idx) = self.list_state.selected() {
             let selection = match self.filtered_items.get(selection_idx) {
                 Some(s) => s.clone(),
-                None => return,
+                None => return Ok(()),
             };
 
             if !selection.saved {
-                actions::save_target(&selection.name);
+                actions::save_target(&selection.name)?;
                 self.update_menu_item(&selection.name, Some(true), None);
                 self.update_filter();
             }
         }
+
+        Ok(())
     }
 
-    fn handle_kill(&mut self) {
+    fn handle_kill(&mut self) -> Result<()> {
         if let Some(selection_idx) = self.list_state.selected() {
             let selection = match self.filtered_items.get(selection_idx) {
                 Some(s) => s.clone(),
-                None => return,
+                None => return Ok(()),
             };
 
             if selection.active {
-                tmux::interface::close_session(&selection.name);
+                tmux::interface::close_session(&selection.name)?;
                 self.update_menu_item(&selection.name, None, Some(false));
 
                 if !selection.saved {
@@ -544,6 +554,8 @@ impl MenuUi {
                 self.update_filter();
             }
         }
+
+        return Ok(());
     }
 
     fn update_menu_item(
