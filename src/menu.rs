@@ -137,7 +137,7 @@ impl MenuUi {
     pub fn run(&mut self, terminal: &mut DefaultTerminal) -> Result<()> {
         while !self.exit {
             terminal.draw(|frame| self.draw(frame))?;
-            self.handle_events()?;
+            self.handle_events(terminal)?;
         }
 
         Ok(())
@@ -371,17 +371,21 @@ impl MenuUi {
         area
     }
 
-    fn handle_events(&mut self) -> Result<()> {
+    fn handle_events(&mut self, terminal: &mut DefaultTerminal) -> Result<()> {
         if event::poll(Duration::from_millis(50))?
             && let Event::Key(key) = event::read()?
         {
-            self.handle_key_event(key)?;
+            self.handle_key_event(key, terminal)?;
         }
 
         Ok(())
     }
 
-    fn handle_key_event(&mut self, key: KeyEvent) -> Result<()> {
+    fn handle_key_event(
+        &mut self,
+        key: KeyEvent,
+        terminal: &mut DefaultTerminal,
+    ) -> Result<()> {
         if key.kind != KeyEventKind::Press {
             return Ok(());
         }
@@ -420,7 +424,7 @@ impl MenuUi {
             match key.code {
                 KeyCode::Char('p') => self.move_selection(-1),
                 KeyCode::Char('n') => self.move_selection(1),
-                KeyCode::Char('e') => self.handle_edit()?,
+                KeyCode::Char('e') => self.handle_edit(terminal)?,
                 KeyCode::Char('s') => self.handle_save()?,
                 KeyCode::Char('d') => {
                     if self.ask_for_confirmation {
@@ -502,7 +506,7 @@ impl MenuUi {
         Ok(())
     }
 
-    fn handle_edit(&mut self) -> Result<()> {
+    fn handle_edit(&mut self, terminal: &mut DefaultTerminal) -> Result<()> {
         if let Some(selection_idx) = self.list_state.selected() {
             let selection = match self.filtered_items.get(selection_idx) {
                 Some(s) => s.clone(),
@@ -510,7 +514,12 @@ impl MenuUi {
             };
 
             if selection.saved {
+                disable_raw_mode()?;
+                execute!(io::stdout(), LeaveAlternateScreen)?;
                 actions::edit(Some(&selection.name))?;
+                enable_raw_mode()?;
+                execute!(io::stdout(), EnterAlternateScreen)?;
+                terminal.clear()?;
             }
         }
 
