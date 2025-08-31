@@ -1,6 +1,5 @@
 //! TUI menu
 use std::{
-    collections::VecDeque,
     fmt,
     io::{self},
     time::Duration,
@@ -28,32 +27,8 @@ use ratatui::{
 
 use anyhow::Result;
 
-use crate::persistence::load_session_from_config;
-use crate::tmux::session::Session;
-
-/// Represents the different actions that can be triggered from the menu.
-#[derive(Debug, Clone, PartialEq)]
-pub enum MenuAction {
-    /// Save the selected session to disk.
-    Save,
-    /// Open the selected session.
-    Open,
-    /// Open the selected session config in $EDITOR.
-    Edit,
-    /// Delete the selected session from disk.
-    Delete,
-    /// Close the selected active session without deleting it.
-    Close,
-}
-
-/// An action queued to be executed after the menu exits.
-#[derive(Debug)]
-pub struct MenuActionItem {
-    /// The name of the selected session.
-    pub selection: String,
-    /// The action to be performed on it.
-    pub action: MenuAction,
-}
+use crate::tmux::{self, session::Session};
+use crate::{actions, persistence::load_session_from_config};
 
 /// A single item in the menu list.
 #[derive(Debug, Clone)]
@@ -74,8 +49,6 @@ pub struct MenuUi {
     filtered_items: Vec<MenuItem>,
     /// Input used for filtering.
     input: String,
-    /// Queu of actions to be executed after the menu closes.
-    action_queue: VecDeque<MenuActionItem>,
 
     ask_for_confirmation: bool,
     show_confirmation_popup: bool,
@@ -119,7 +92,6 @@ impl fmt::Debug for MenuUi {
             .field("filtered_items", &self.filtered_items)
             .field("input", &self.input)
             .field("list_state", &self.list_state)
-            .field("action_queue", &self.action_queue)
             .field("show_confirmation_popup", &self.show_confirmation_popup)
             .field("show_preview", &self.show_preview)
             .field("show_help", &self.show_help)
@@ -150,7 +122,6 @@ impl MenuUi {
             input: String::new(),
             list_state,
             matcher: fuzzy_matcher::skim::SkimMatcherV2::default(),
-            action_queue: VecDeque::new(),
             ask_for_confirmation,
             show_confirmation_popup: false,
             show_preview,
@@ -170,11 +141,6 @@ impl MenuUi {
         }
 
         Ok(())
-    }
-
-    /// Retrieves and removes the next queued action, if any.
-    pub fn dequeue_action(&mut self) -> Result<Option<MenuActionItem>> {
-        Ok(self.action_queue.pop_front())
     }
 
     fn draw(&mut self, frame: &mut Frame) {
@@ -484,10 +450,22 @@ impl MenuUi {
                 }
                 KeyCode::Up => self.move_selection(-1),
                 KeyCode::Down => self.move_selection(1),
-                KeyCode::Enter => self.enqueue_action(MenuAction::Open),
+                KeyCode::Enter => self.handle_open(),
                 KeyCode::Esc => self.exit = true,
                 _ => {}
             }
+        }
+    }
+
+    fn handle_open(&mut self) {
+        if let Some(selection_idx) = self.list_state.selected() {
+            let selection = match self.filtered_items.get(selection_idx) {
+                Some(s) => s.clone(),
+                None => return,
+            };
+
+            actions::open(&selection.name);
+            self.exit = true;
         }
     }
 
@@ -499,10 +477,10 @@ impl MenuUi {
             };
 
             if selection.saved {
-                self.enqueue_action(MenuAction::Delete);
+                actions::delete(&selection.name);
                 self.update_menu_item(&selection.name, Some(false), None);
             } else {
-                self.enqueue_action(MenuAction::Close);
+                tmux::interface::close_session(&selection.name);
                 self.update_menu_item(&selection.name, None, Some(false));
             }
 
@@ -526,7 +504,7 @@ impl MenuUi {
             };
 
             if selection.saved {
-                self.enqueue_action(MenuAction::Edit)
+                actions::edit(Some(&selection.name));
             }
         }
     }
@@ -539,7 +517,7 @@ impl MenuUi {
             };
 
             if !selection.saved {
-                self.enqueue_action(MenuAction::Save);
+                actions::save_target(&selection.name);
                 self.update_menu_item(&selection.name, Some(true), None);
                 self.update_filter();
             }
@@ -554,7 +532,7 @@ impl MenuUi {
             };
 
             if selection.active {
-                self.enqueue_action(MenuAction::Close);
+                tmux::interface::close_session(&selection.name);
                 self.update_menu_item(&selection.name, None, Some(false));
 
                 if !selection.saved {
@@ -581,24 +559,6 @@ impl MenuUi {
             if let Some(active_val) = active {
                 item.active = active_val;
             }
-        }
-    }
-
-    fn enqueue_action(&mut self, action: MenuAction) {
-        if let Some(selection_idx) = self.list_state.selected()
-            && let Some(selection) = self.filtered_items.get(selection_idx)
-        {
-            if action != MenuAction::Delete
-                && action != MenuAction::Close
-                && action != MenuAction::Save
-            {
-                self.exit = true;
-            }
-
-            self.action_queue.push_back(MenuActionItem {
-                selection: selection.name.clone(),
-                action,
-            });
         }
     }
 
