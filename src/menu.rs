@@ -26,19 +26,11 @@ use ratatui::{
 
 use anyhow::Result;
 
+pub mod item;
+
+use crate::menu::item::MenuItem;
 use crate::tmux::{self, session::Session};
 use crate::{actions, persistence::load_session_from_config};
-
-/// A single item in the menu list.
-#[derive(Debug, Clone)]
-pub struct MenuItem {
-    /// The session name.
-    name: String,
-    /// Whether this session is saved to disk.
-    saved: bool,
-    /// Whether this session is currently active.
-    active: bool,
-}
 
 /// Menu state.
 pub struct MenuUi {
@@ -57,31 +49,6 @@ pub struct MenuUi {
 
     list_state: ListState,
     matcher: SkimMatcherV2,
-}
-
-impl fmt::Display for MenuItem {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let saved_indicator = if !self.saved { "* " } else { "" };
-        let active_indicator = if self.active { " (active)" } else { "" };
-
-        write!(f, "{}{}{}", saved_indicator, self.name, active_indicator)
-    }
-}
-
-impl MenuItem {
-    /// Creates a new menu item.
-    ///
-    /// # Arguments
-    /// * `name` - The session name.
-    /// * `saved` - Whether the session is saved to storage.
-    /// * `active` - Whether the session is currently active.
-    pub fn new(name: String, saved: bool, active: bool) -> Self {
-        Self {
-            name,
-            saved,
-            active,
-        }
-    }
 }
 
 impl fmt::Debug for MenuUi {

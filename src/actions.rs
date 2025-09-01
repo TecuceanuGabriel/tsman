@@ -7,7 +7,8 @@ use std::fs;
 use std::process::Command;
 
 use crate::cli::{Args, Commands};
-use crate::menu::{MenuItem, MenuUi};
+use crate::menu::MenuUi;
+use crate::menu::item::MenuItem;
 use crate::persistence::*;
 use crate::terminal_utils;
 use crate::tmux::interface::*;
