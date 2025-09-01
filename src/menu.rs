@@ -13,8 +13,6 @@ use crossterm::{
     },
 };
 
-use fuzzy_matcher::{FuzzyMatcher, skim::SkimMatcherV2};
-
 use ratatui::{
     DefaultTerminal, Frame,
     layout::{Alignment, Constraint, Direction, Flex, Layout, Margin, Rect},
@@ -26,11 +24,11 @@ use ratatui::{
 use anyhow::Result;
 
 pub mod item;
-pub mod item_state;
+pub mod items_state;
 pub mod ui_flags;
 
 use crate::menu::item::MenuItem;
-use crate::menu::item_state::ItemsState;
+use crate::menu::items_state::ItemsState;
 use crate::menu::ui_flags::UiFlags;
 use crate::tmux::{self, session::Session};
 use crate::{actions, persistence::load_session_from_config};
@@ -39,10 +37,7 @@ use crate::{actions, persistence::load_session_from_config};
 pub struct Menu {
     items: ItemsState,
     ui_flags: UiFlags,
-
     should_exit: bool,
-
-    matcher: SkimMatcherV2,
 }
 
 impl Menu {
@@ -62,7 +57,6 @@ impl Menu {
             items: ItemsState::new(items),
             ui_flags: UiFlags::new(show_preview, ask_for_confirmation),
             should_exit: false,
-            matcher: fuzzy_matcher::skim::SkimMatcherV2::default(),
         }
     }
 
@@ -365,8 +359,8 @@ impl Menu {
 
         if key.modifiers.contains(KeyModifiers::CONTROL) {
             match key.code {
-                KeyCode::Char('p') => self.move_selection(-1),
-                KeyCode::Char('n') => self.move_selection(1),
+                KeyCode::Char('p') => self.items.move_selection(-1),
+                KeyCode::Char('n') => self.items.move_selection(1),
                 KeyCode::Char('e') => self.handle_edit(terminal)?,
                 KeyCode::Char('s') => self.handle_save()?,
                 KeyCode::Char('d') => {
@@ -385,7 +379,7 @@ impl Menu {
                     self.ui_flags.show_help = !self.ui_flags.show_help
                 }
                 KeyCode::Char('w') => {
-                    self.remove_last_word_from_input();
+                    self.items.remove_last_word_from_input();
                 }
                 _ => {}
             }
@@ -393,14 +387,14 @@ impl Menu {
             match key.code {
                 KeyCode::Char(c) => {
                     self.items.input.push(c);
-                    self.update_filter_and_reset();
+                    self.items.update_filter_and_reset();
                 }
                 KeyCode::Backspace => {
                     self.items.input.pop();
-                    self.update_filter_and_reset();
+                    self.items.update_filter_and_reset();
                 }
-                KeyCode::Up => self.move_selection(-1),
-                KeyCode::Down => self.move_selection(1),
+                KeyCode::Up => self.items.move_selection(-1),
+                KeyCode::Down => self.items.move_selection(1),
                 KeyCode::Enter => self.handle_open()?,
                 KeyCode::Esc => self.should_exit = true,
                 _ => {}
@@ -433,10 +427,10 @@ impl Menu {
 
             if selection.saved {
                 actions::delete(&selection.name)?;
-                self.update_menu_item(&selection.name, Some(false), None);
+                self.items.update_item(&selection.name, Some(false), None);
             } else {
                 tmux::interface::close_session(&selection.name)?;
-                self.update_menu_item(&selection.name, None, Some(false));
+                self.items.update_item(&selection.name, None, Some(false));
             }
 
             if (selection.saved && !selection.active)
@@ -450,7 +444,7 @@ impl Menu {
                     .select(Some(selection_idx.saturating_sub(1)));
             }
 
-            self.update_filter();
+            self.items.update_filter();
         }
 
         Ok(())
@@ -485,8 +479,8 @@ impl Menu {
 
             if !selection.saved {
                 actions::save_target(&selection.name)?;
-                self.update_menu_item(&selection.name, Some(true), None);
-                self.update_filter();
+                self.items.update_item(&selection.name, Some(true), None);
+                self.items.update_filter();
             }
         }
 
@@ -502,7 +496,7 @@ impl Menu {
 
             if selection.active {
                 tmux::interface::close_session(&selection.name)?;
-                self.update_menu_item(&selection.name, None, Some(false));
+                self.items.update_item(&selection.name, None, Some(false));
 
                 if !selection.saved {
                     self.items
@@ -513,85 +507,10 @@ impl Menu {
                         .select(Some(selection_idx.saturating_sub(1)));
                 }
 
-                self.update_filter();
+                self.items.update_filter();
             }
         }
 
         return Ok(());
-    }
-
-    fn update_menu_item(
-        &mut self,
-        name: &str,
-        saved: Option<bool>,
-        active: Option<bool>,
-    ) {
-        if let Some(item) =
-            self.items.all_items.iter_mut().find(|i| i.name == name)
-        {
-            if let Some(saved_val) = saved {
-                item.saved = saved_val;
-            }
-            if let Some(active_val) = active {
-                item.active = active_val;
-            }
-        }
-    }
-
-    fn update_filter_and_reset(&mut self) {
-        self.update_filter();
-        self.reset_position();
-    }
-
-    fn update_filter(&mut self) {
-        if self.items.input.is_empty() {
-            self.items.filtered_items = self.items.all_items.clone();
-        } else {
-            self.items.filtered_items = self
-                .items
-                .all_items
-                .iter()
-                .filter(|item| {
-                    self.matcher
-                        .fuzzy_match(&item.name, &self.items.input)
-                        .is_some()
-                })
-                .cloned()
-                .collect();
-        }
-    }
-
-    fn reset_position(&mut self) {
-        if self.items.filtered_items.is_empty() {
-            self.items.list_state.select(None);
-        } else {
-            self.items.list_state.select(Some(0));
-        }
-    }
-
-    fn move_selection(&mut self, delta: i32) {
-        if let Some(selection_idx) = self.items.list_state.selected() {
-            let new_selected =
-                usize::try_from((selection_idx as i32 + delta).max(0))
-                    .unwrap_or(0);
-            self.items.list_state.select(Some(
-                new_selected
-                    .min(self.items.filtered_items.len().saturating_sub(1)),
-            ));
-        }
-    }
-
-    fn remove_last_word_from_input(&mut self) {
-        if self.items.input.is_empty() {
-            return;
-        }
-
-        if let Some(last_space) = self.items.input.trim_end().rfind(' ') {
-            self.items.input.truncate(last_space);
-        } else {
-            self.items.input.clear();
-        }
-
-        self.update_filter_and_reset();
     }
 }
