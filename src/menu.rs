@@ -328,77 +328,100 @@ impl Menu {
         }
 
         if self.ui_flags.show_confirmation_popup {
-            match key.code {
-                KeyCode::Char('y' | 'Y') | KeyCode::Enter => {
-                    self.handle_delete()?;
-                    self.ui_flags.show_confirmation_popup = false;
-                }
-                KeyCode::Char('n' | 'N' | 'q') | KeyCode::Esc => {
-                    self.ui_flags.show_confirmation_popup = false;
-                }
-                _ => {}
-            }
-            return Ok(());
+            return self.handle_confirmation_popup_key(key);
         }
 
         if self.ui_flags.show_help {
-            if key.modifiers.contains(KeyModifiers::CONTROL) {
-                if let KeyCode::Char('h' | 'c') = key.code {
-                    self.ui_flags.show_help = !self.ui_flags.show_help
-                }
-            } else {
-                match key.code {
-                    KeyCode::Char('q') | KeyCode::Esc | KeyCode::Enter => {
-                        self.ui_flags.show_help = !self.ui_flags.show_help
-                    }
-                    _ => {}
-                }
-            }
-            return Ok(());
+            return self.handle_help_popup_key(key);
         }
 
         if key.modifiers.contains(KeyModifiers::CONTROL) {
-            match key.code {
-                KeyCode::Char('p') => self.items.move_selection(-1),
-                KeyCode::Char('n') => self.items.move_selection(1),
-                KeyCode::Char('e') => self.handle_edit(terminal)?,
-                KeyCode::Char('s') => self.handle_save()?,
-                KeyCode::Char('d') => {
-                    if self.ui_flags.ask_for_confirmation {
-                        self.ui_flags.show_confirmation_popup = true;
-                    } else {
-                        self.handle_delete()?;
-                    }
-                }
-                KeyCode::Char('k') => self.handle_kill()?,
-                KeyCode::Char('c') => self.should_exit = true,
-                KeyCode::Char('t') => {
-                    self.ui_flags.show_preview = !self.ui_flags.show_preview
-                }
-                KeyCode::Char('h') => {
-                    self.ui_flags.show_help = !self.ui_flags.show_help
-                }
-                KeyCode::Char('w') => {
-                    self.items.remove_last_word_from_input();
-                }
-                _ => {}
+            self.handle_modifier_key_combo(key, terminal)
+        } else {
+            self.handle_regular_key(key)
+        }
+    }
+
+    fn handle_confirmation_popup_key(&mut self, key: KeyEvent) -> Result<()> {
+        match key.code {
+            KeyCode::Char('y' | 'Y') | KeyCode::Enter => {
+                self.handle_delete()?;
+                self.ui_flags.show_confirmation_popup = false;
+            }
+            KeyCode::Char('n' | 'N' | 'q') | KeyCode::Esc => {
+                self.ui_flags.show_confirmation_popup = false;
+            }
+            _ => {}
+        }
+
+        Ok(())
+    }
+
+    fn handle_help_popup_key(&mut self, key: KeyEvent) -> Result<()> {
+        if key.modifiers.contains(KeyModifiers::CONTROL) {
+            if let KeyCode::Char('h' | 'c') = key.code {
+                self.ui_flags.show_help = !self.ui_flags.show_help
             }
         } else {
             match key.code {
-                KeyCode::Char(c) => {
-                    self.items.input.push(c);
-                    self.items.update_filter_and_reset();
+                KeyCode::Char('q') | KeyCode::Esc | KeyCode::Enter => {
+                    self.ui_flags.show_help = !self.ui_flags.show_help
                 }
-                KeyCode::Backspace => {
-                    self.items.input.pop();
-                    self.items.update_filter_and_reset();
-                }
-                KeyCode::Up => self.items.move_selection(-1),
-                KeyCode::Down => self.items.move_selection(1),
-                KeyCode::Enter => self.handle_open()?,
-                KeyCode::Esc => self.should_exit = true,
                 _ => {}
             }
+        }
+
+        Ok(())
+    }
+
+    fn handle_modifier_key_combo(
+        &mut self,
+        key: KeyEvent,
+        terminal: &mut DefaultTerminal,
+    ) -> Result<()> {
+        match key.code {
+            KeyCode::Char('p') => self.items.move_selection(-1),
+            KeyCode::Char('n') => self.items.move_selection(1),
+            KeyCode::Char('e') => self.handle_edit(terminal)?,
+            KeyCode::Char('s') => self.handle_save()?,
+            KeyCode::Char('d') => {
+                if self.ui_flags.ask_for_confirmation {
+                    self.ui_flags.show_confirmation_popup = true;
+                } else {
+                    self.handle_delete()?;
+                }
+            }
+            KeyCode::Char('k') => self.handle_kill()?,
+            KeyCode::Char('c') => self.should_exit = true,
+            KeyCode::Char('t') => {
+                self.ui_flags.show_preview = !self.ui_flags.show_preview
+            }
+            KeyCode::Char('h') => {
+                self.ui_flags.show_help = !self.ui_flags.show_help
+            }
+            KeyCode::Char('w') => {
+                self.items.remove_last_word_from_input();
+            }
+            _ => {}
+        }
+        Ok(())
+    }
+
+    fn handle_regular_key(&mut self, key: KeyEvent) -> Result<()> {
+        match key.code {
+            KeyCode::Char(c) => {
+                self.items.input.push(c);
+                self.items.update_filter_and_reset();
+            }
+            KeyCode::Backspace => {
+                self.items.input.pop();
+                self.items.update_filter_and_reset();
+            }
+            KeyCode::Up => self.items.move_selection(-1),
+            KeyCode::Down => self.items.move_selection(1),
+            KeyCode::Enter => self.handle_open()?,
+            KeyCode::Esc => self.should_exit = true,
+            _ => {}
         }
 
         Ok(())
@@ -511,6 +534,6 @@ impl Menu {
             }
         }
 
-        return Ok(());
+        Ok(())
     }
 }
