@@ -1,6 +1,5 @@
 //! TUI menu
 use std::{
-    fmt,
     io::{self},
     time::Duration,
 };
@@ -21,52 +20,32 @@ use ratatui::{
     layout::{Alignment, Constraint, Direction, Flex, Layout, Margin, Rect},
     style::{Color, Style},
     text::Line,
-    widgets::{Block, Borders, Clear, List, ListState, Paragraph},
+    widgets::{Block, Borders, Clear, List, Paragraph},
 };
 
 use anyhow::Result;
 
 pub mod item;
+pub mod item_state;
+pub mod ui_flags;
 
 use crate::menu::item::MenuItem;
+use crate::menu::item_state::ItemsState;
+use crate::menu::ui_flags::UiFlags;
 use crate::tmux::{self, session::Session};
 use crate::{actions, persistence::load_session_from_config};
 
 /// Menu state.
-pub struct MenuUi {
-    /// List of all items in the menu.
-    all_items: Vec<MenuItem>,
-    /// List of filtered items using fuzzy-matcher based on the input.
-    filtered_items: Vec<MenuItem>,
-    /// Input used for filtering.
-    input: String,
+pub struct Menu {
+    items: ItemsState,
+    ui_flags: UiFlags,
 
-    ask_for_confirmation: bool,
-    show_confirmation_popup: bool,
-    show_preview: bool,
-    show_help: bool,
-    exit: bool,
+    should_exit: bool,
 
-    list_state: ListState,
     matcher: SkimMatcherV2,
 }
 
-impl fmt::Debug for MenuUi {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("MenuUi")
-            .field("all_items", &self.all_items)
-            .field("filtered_items", &self.filtered_items)
-            .field("input", &self.input)
-            .field("list_state", &self.list_state)
-            .field("show_confirmation_popup", &self.show_confirmation_popup)
-            .field("show_preview", &self.show_preview)
-            .field("show_help", &self.show_help)
-            .field("exit", &self.exit)
-            .finish()
-    }
-}
-
-impl MenuUi {
+impl Menu {
     /// Creates a new [`MenuUi`] instance.
     ///
     /// # Arguments
@@ -79,20 +58,11 @@ impl MenuUi {
         show_preview: bool,
         ask_for_confirmation: bool,
     ) -> Self {
-        let mut list_state = ListState::default();
-        list_state.select(Some(0));
-
         Self {
-            all_items: items.clone(),
-            filtered_items: items,
-            input: String::new(),
-            list_state,
+            items: ItemsState::new(items),
+            ui_flags: UiFlags::new(show_preview, ask_for_confirmation),
+            should_exit: false,
             matcher: fuzzy_matcher::skim::SkimMatcherV2::default(),
-            ask_for_confirmation,
-            show_confirmation_popup: false,
-            show_preview,
-            show_help: false,
-            exit: false,
         }
     }
 
@@ -101,7 +71,7 @@ impl MenuUi {
     /// # Arguments
     /// * `terminal` - The terminal backend to draw on.
     pub fn run(&mut self, terminal: &mut DefaultTerminal) -> Result<()> {
-        while !self.exit {
+        while !self.should_exit {
             terminal.draw(|frame| self.draw(frame))?;
             self.handle_events(terminal)?;
         }
@@ -118,7 +88,7 @@ impl MenuUi {
             ])
             .split(frame.area());
 
-        let content_chunks = if self.show_preview {
+        let content_chunks = if self.ui_flags.show_preview {
             Layout::default()
                 .direction(Direction::Horizontal)
                 .constraints([
@@ -140,8 +110,12 @@ impl MenuUi {
 
         let results_block =
             Block::default().borders(Borders::ALL).title("Results");
-        let items: Vec<String> =
-            self.filtered_items.iter().map(|s| s.to_string()).collect();
+        let items: Vec<String> = self
+            .items
+            .filtered_items
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
 
         if items.is_empty() {
             frame.render_widget(
@@ -158,7 +132,7 @@ impl MenuUi {
             frame.render_stateful_widget(
                 list,
                 left_content[0],
-                &mut self.list_state,
+                &mut self.items.list_state,
             );
         }
 
@@ -167,7 +141,7 @@ impl MenuUi {
 
         frame.render_widget(input_block, left_content[1]);
 
-        let input_text = Paragraph::new("> ".to_string() + &self.input)
+        let input_text = Paragraph::new("> ".to_string() + &self.items.input)
             .style(Style::default().fg(Color::Green));
 
         frame.render_widget(
@@ -184,22 +158,25 @@ impl MenuUi {
 
         frame.render_widget(help_hint, main_chunks[1]);
 
-        if self.show_preview {
+        if self.ui_flags.show_preview {
             self.draw_preview_pane(frame, content_chunks[1]);
         }
 
-        if self.ask_for_confirmation && self.show_confirmation_popup {
-            MenuUi::draw_confirmation_popup(frame);
+        if self.ui_flags.ask_for_confirmation
+            && self.ui_flags.show_confirmation_popup
+        {
+            Menu::draw_confirmation_popup(frame);
         }
 
-        if self.show_help {
-            MenuUi::draw_help_popup(frame);
+        if self.ui_flags.show_help {
+            Menu::draw_help_popup(frame);
         }
     }
 
     fn generate_preview_content(&self) -> String {
-        if let Some(selection_idx) = self.list_state.selected()
-            && let Some(selection) = self.filtered_items.get(selection_idx)
+        if let Some(selection_idx) = self.items.list_state.selected()
+            && let Some(selection) =
+                self.items.filtered_items.get(selection_idx)
             && let Ok(session_str) = load_session_from_config(&selection.name)
         {
             let session: Session =
@@ -221,7 +198,7 @@ impl MenuUi {
     }
 
     fn draw_confirmation_popup(f: &mut Frame) {
-        let popup_area = MenuUi::create_centered_rect(f.area(), 15, 3);
+        let popup_area = Menu::create_centered_rect(f.area(), 15, 3);
 
         f.render_widget(Clear, popup_area);
 
@@ -239,7 +216,7 @@ impl MenuUi {
     }
 
     fn draw_help_popup(f: &mut Frame) {
-        let popup_area = MenuUi::create_centered_rect(f.area(), 60, 14);
+        let popup_area = Menu::create_centered_rect(f.area(), 60, 14);
 
         f.render_widget(Clear, popup_area);
 
@@ -356,29 +333,29 @@ impl MenuUi {
             return Ok(());
         }
 
-        if self.show_confirmation_popup {
+        if self.ui_flags.show_confirmation_popup {
             match key.code {
                 KeyCode::Char('y' | 'Y') | KeyCode::Enter => {
                     self.handle_delete()?;
-                    self.show_confirmation_popup = false;
+                    self.ui_flags.show_confirmation_popup = false;
                 }
                 KeyCode::Char('n' | 'N' | 'q') | KeyCode::Esc => {
-                    self.show_confirmation_popup = false;
+                    self.ui_flags.show_confirmation_popup = false;
                 }
                 _ => {}
             }
             return Ok(());
         }
 
-        if self.show_help {
+        if self.ui_flags.show_help {
             if key.modifiers.contains(KeyModifiers::CONTROL) {
                 if let KeyCode::Char('h' | 'c') = key.code {
-                    self.show_help = !self.show_help
+                    self.ui_flags.show_help = !self.ui_flags.show_help
                 }
             } else {
                 match key.code {
                     KeyCode::Char('q') | KeyCode::Esc | KeyCode::Enter => {
-                        self.show_help = !self.show_help
+                        self.ui_flags.show_help = !self.ui_flags.show_help
                     }
                     _ => {}
                 }
@@ -393,16 +370,20 @@ impl MenuUi {
                 KeyCode::Char('e') => self.handle_edit(terminal)?,
                 KeyCode::Char('s') => self.handle_save()?,
                 KeyCode::Char('d') => {
-                    if self.ask_for_confirmation {
-                        self.show_confirmation_popup = true;
+                    if self.ui_flags.ask_for_confirmation {
+                        self.ui_flags.show_confirmation_popup = true;
                     } else {
                         self.handle_delete()?;
                     }
                 }
                 KeyCode::Char('k') => self.handle_kill()?,
-                KeyCode::Char('c') => self.exit = true,
-                KeyCode::Char('t') => self.show_preview = !self.show_preview,
-                KeyCode::Char('h') => self.show_help = !self.show_help,
+                KeyCode::Char('c') => self.should_exit = true,
+                KeyCode::Char('t') => {
+                    self.ui_flags.show_preview = !self.ui_flags.show_preview
+                }
+                KeyCode::Char('h') => {
+                    self.ui_flags.show_help = !self.ui_flags.show_help
+                }
                 KeyCode::Char('w') => {
                     self.remove_last_word_from_input();
                 }
@@ -411,17 +392,17 @@ impl MenuUi {
         } else {
             match key.code {
                 KeyCode::Char(c) => {
-                    self.input.push(c);
+                    self.items.input.push(c);
                     self.update_filter_and_reset();
                 }
                 KeyCode::Backspace => {
-                    self.input.pop();
+                    self.items.input.pop();
                     self.update_filter_and_reset();
                 }
                 KeyCode::Up => self.move_selection(-1),
                 KeyCode::Down => self.move_selection(1),
                 KeyCode::Enter => self.handle_open()?,
-                KeyCode::Esc => self.exit = true,
+                KeyCode::Esc => self.should_exit = true,
                 _ => {}
             }
         }
@@ -430,22 +411,22 @@ impl MenuUi {
     }
 
     fn handle_open(&mut self) -> Result<()> {
-        if let Some(selection_idx) = self.list_state.selected() {
-            let selection = match self.filtered_items.get(selection_idx) {
+        if let Some(selection_idx) = self.items.list_state.selected() {
+            let selection = match self.items.filtered_items.get(selection_idx) {
                 Some(s) => s.clone(),
                 None => return Ok(()),
             };
 
             actions::open(&selection.name)?;
-            self.exit = true;
+            self.should_exit = true;
         }
 
         Ok(())
     }
 
     fn handle_delete(&mut self) -> Result<()> {
-        if let Some(selection_idx) = self.list_state.selected() {
-            let selection = match self.filtered_items.get(selection_idx) {
+        if let Some(selection_idx) = self.items.list_state.selected() {
+            let selection = match self.items.filtered_items.get(selection_idx) {
                 Some(s) => s.clone(),
                 None => return Ok(()),
             };
@@ -461,8 +442,11 @@ impl MenuUi {
             if (selection.saved && !selection.active)
                 || (!selection.saved && selection.active)
             {
-                self.all_items.retain(|item| item.name != selection.name);
-                self.list_state
+                self.items
+                    .all_items
+                    .retain(|item| item.name != selection.name);
+                self.items
+                    .list_state
                     .select(Some(selection_idx.saturating_sub(1)));
             }
 
@@ -473,8 +457,8 @@ impl MenuUi {
     }
 
     fn handle_edit(&mut self, terminal: &mut DefaultTerminal) -> Result<()> {
-        if let Some(selection_idx) = self.list_state.selected() {
-            let selection = match self.filtered_items.get(selection_idx) {
+        if let Some(selection_idx) = self.items.list_state.selected() {
+            let selection = match self.items.filtered_items.get(selection_idx) {
                 Some(s) => s.clone(),
                 None => return Ok(()),
             };
@@ -493,8 +477,8 @@ impl MenuUi {
     }
 
     fn handle_save(&mut self) -> Result<()> {
-        if let Some(selection_idx) = self.list_state.selected() {
-            let selection = match self.filtered_items.get(selection_idx) {
+        if let Some(selection_idx) = self.items.list_state.selected() {
+            let selection = match self.items.filtered_items.get(selection_idx) {
                 Some(s) => s.clone(),
                 None => return Ok(()),
             };
@@ -510,8 +494,8 @@ impl MenuUi {
     }
 
     fn handle_kill(&mut self) -> Result<()> {
-        if let Some(selection_idx) = self.list_state.selected() {
-            let selection = match self.filtered_items.get(selection_idx) {
+        if let Some(selection_idx) = self.items.list_state.selected() {
+            let selection = match self.items.filtered_items.get(selection_idx) {
                 Some(s) => s.clone(),
                 None => return Ok(()),
             };
@@ -521,8 +505,11 @@ impl MenuUi {
                 self.update_menu_item(&selection.name, None, Some(false));
 
                 if !selection.saved {
-                    self.all_items.retain(|item| item.name != selection.name);
-                    self.list_state
+                    self.items
+                        .all_items
+                        .retain(|item| item.name != selection.name);
+                    self.items
+                        .list_state
                         .select(Some(selection_idx.saturating_sub(1)));
                 }
 
@@ -539,7 +526,9 @@ impl MenuUi {
         saved: Option<bool>,
         active: Option<bool>,
     ) {
-        if let Some(item) = self.all_items.iter_mut().find(|i| i.name == name) {
+        if let Some(item) =
+            self.items.all_items.iter_mut().find(|i| i.name == name)
+        {
             if let Some(saved_val) = saved {
                 item.saved = saved_val;
             }
@@ -555,14 +544,17 @@ impl MenuUi {
     }
 
     fn update_filter(&mut self) {
-        if self.input.is_empty() {
-            self.filtered_items = self.all_items.clone();
+        if self.items.input.is_empty() {
+            self.items.filtered_items = self.items.all_items.clone();
         } else {
-            self.filtered_items = self
+            self.items.filtered_items = self
+                .items
                 .all_items
                 .iter()
                 .filter(|item| {
-                    self.matcher.fuzzy_match(&item.name, &self.input).is_some()
+                    self.matcher
+                        .fuzzy_match(&item.name, &self.items.input)
+                        .is_some()
                 })
                 .cloned()
                 .collect();
@@ -570,33 +562,34 @@ impl MenuUi {
     }
 
     fn reset_position(&mut self) {
-        if self.filtered_items.is_empty() {
-            self.list_state.select(None);
+        if self.items.filtered_items.is_empty() {
+            self.items.list_state.select(None);
         } else {
-            self.list_state.select(Some(0));
+            self.items.list_state.select(Some(0));
         }
     }
 
     fn move_selection(&mut self, delta: i32) {
-        if let Some(selection_idx) = self.list_state.selected() {
+        if let Some(selection_idx) = self.items.list_state.selected() {
             let new_selected =
                 usize::try_from((selection_idx as i32 + delta).max(0))
                     .unwrap_or(0);
-            self.list_state.select(Some(
-                new_selected.min(self.filtered_items.len().saturating_sub(1)),
+            self.items.list_state.select(Some(
+                new_selected
+                    .min(self.items.filtered_items.len().saturating_sub(1)),
             ));
         }
     }
 
     fn remove_last_word_from_input(&mut self) {
-        if self.input.is_empty() {
+        if self.items.input.is_empty() {
             return;
         }
 
-        if let Some(last_space) = self.input.trim_end().rfind(' ') {
-            self.input.truncate(last_space);
+        if let Some(last_space) = self.items.input.trim_end().rfind(' ') {
+            self.items.input.truncate(last_space);
         } else {
-            self.input.clear();
+            self.items.input.clear();
         }
 
         self.update_filter_and_reset();
