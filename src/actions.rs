@@ -7,8 +7,9 @@ use std::fs;
 use std::process::Command;
 
 use crate::cli::{Args, Commands};
-use crate::menu::{self, MenuItem, MenuUi};
+use crate::menu::{MenuItem, MenuUi};
 use crate::persistence::*;
+use crate::terminal_utils;
 use crate::tmux::interface::*;
 use crate::tmux::session::Session;
 
@@ -185,13 +186,13 @@ pub fn delete(session_name: &str) -> Result<()> {
 /// Returns an error if the menu fails to initialize, display, or perform
 /// any action.
 fn menu(show_preview: bool, ask_for_confirmation: bool) -> Result<()> {
-    let mut terminal = menu::init()?;
+    let mut terminal = terminal_utils::init()?;
 
     let mut menu_ui =
         MenuUi::new(get_all_sessions()?, show_preview, ask_for_confirmation);
     menu_ui.run(&mut terminal)?;
 
-    menu::restore(terminal)?;
+    terminal_utils::restore(terminal)?;
 
     Ok(())
 }

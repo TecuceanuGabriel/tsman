@@ -6,6 +6,7 @@ mod actions;
 mod cli;
 mod menu;
 mod persistence;
+mod terminal_utils;
 mod tmux;
 
 use anyhow::{Context, Result};

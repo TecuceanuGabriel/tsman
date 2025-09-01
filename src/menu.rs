@@ -17,9 +17,8 @@ use crossterm::{
 use fuzzy_matcher::{FuzzyMatcher, skim::SkimMatcherV2};
 
 use ratatui::{
-    DefaultTerminal, Frame, Terminal,
+    DefaultTerminal, Frame,
     layout::{Alignment, Constraint, Direction, Flex, Layout, Margin, Rect},
-    prelude::CrosstermBackend,
     style::{Color, Style},
     text::Line,
     widgets::{Block, Borders, Clear, List, ListState, Paragraph},
@@ -635,23 +634,4 @@ impl MenuUi {
 
         self.update_filter_and_reset();
     }
-}
-
-/// Initializes the terminal in raw mode and alternate screen.
-///
-/// Returns a [`DefaultTerminal`] that must later be passed to [`restore`].
-pub fn init() -> Result<DefaultTerminal> {
-    enable_raw_mode()?;
-    let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen)?;
-    let backend = CrosstermBackend::new(stdout);
-    let terminal = Terminal::new(backend)?;
-    Ok(terminal)
-}
-
-/// Restores the terminal to its normal mode and leaves the alternate screen.
-pub fn restore(mut terminal: DefaultTerminal) -> Result<()> {
-    disable_raw_mode()?;
-    execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
-    Ok(())
 }
