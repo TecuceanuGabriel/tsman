@@ -14,6 +14,19 @@ use crate::{
     tmux::session::Session,
 };
 
+const HIGHLIGHT_STYLE: Style = Style::new().bg(Color::Blue);
+const SUBTLE_STYLE: Style = Style::new().fg(Color::DarkGray);
+const POPUP_STYLE: Style = Style::new().fg(Color::Blue).bg(Color::Gray);
+const INPUT_TEXT_STYLE: Style = Style::new().fg(Color::Green);
+
+const PREVIEW_WIDTH_RATIO: u16 = 40;
+
+const CONFIRMATION_POPUP_WIDTH: u16 = 15;
+const CONFIRMATION_POPUP_HEIGHT: u16 = 3;
+
+const HELP_POPUP_WIDTH: u16 = 60;
+const HELP_POPUP_HEIGHT: u16 = 14;
+
 pub trait MenuRenderer {
     fn draw(&mut self, frame: &mut Frame, state: &mut MenuState);
 }
@@ -22,25 +35,25 @@ pub struct DefaultMenuRenderer;
 
 impl MenuRenderer for DefaultMenuRenderer {
     fn draw(&mut self, frame: &mut Frame, state: &mut MenuState) {
-        let main_chunks = crate_main_layout(frame.area());
+        let chunks = crate_main_layout(frame.area());
         let content_chunks =
-            create_content_layout(main_chunks[0], state.ui_flags.show_preview);
+            create_content_layout(chunks[0], state.ui_flags.show_preview);
 
-        let left_content = Layout::default()
+        let left_content_chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([Constraint::Min(3), Constraint::Length(3)])
             .split(content_chunks[0]);
 
         render_results_list(
             frame,
-            left_content[0],
+            left_content_chunks[0],
             &state.items.filtered_items,
             &mut state.items.list_state,
         );
 
-        render_input_field(frame, left_content[1], &state.items.input);
+        render_input_field(frame, left_content_chunks[1], &state.items.input);
 
-        render_help_hint(frame, main_chunks[1]);
+        render_help_hint(frame, chunks[1]);
 
         if state.ui_flags.show_preview {
             draw_preview_pane(frame, content_chunks[1], &state.items);
@@ -61,28 +74,24 @@ impl MenuRenderer for DefaultMenuRenderer {
 fn crate_main_layout(area: Rect) -> Rc<[Rect]> {
     Layout::default()
         .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Min(3),
-            Constraint::Length(1), // help hint
-        ])
+        .constraints([Constraint::Min(3), Constraint::Length(1)])
         .split(area)
 }
 
 fn create_content_layout(area: Rect, show_preview: bool) -> Rc<[Rect]> {
-    if show_preview {
-        Layout::default()
-            .direction(Direction::Horizontal)
-            .constraints([
-                Constraint::Percentage(60),
-                Constraint::Percentage(40),
-            ])
-            .split(area)
+    let constrains = if show_preview {
+        vec![
+            Constraint::Percentage(100 - PREVIEW_WIDTH_RATIO),
+            Constraint::Percentage(PREVIEW_WIDTH_RATIO),
+        ]
     } else {
-        Layout::default()
-            .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(100)])
-            .split(area)
-    }
+        vec![Constraint::Percentage(100)]
+    };
+
+    Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints(constrains)
+        .split(area)
 }
 
 fn render_results_list(
@@ -94,21 +103,21 @@ fn render_results_list(
     let items: Vec<String> =
         filtered_items.iter().map(|i| i.to_string()).collect();
 
-    let block = Block::default().borders(Borders::ALL).title("Results");
+    let results_block = Block::default().borders(Borders::ALL).title("Results");
 
     if items.is_empty() {
         frame.render_widget(
             Paragraph::new("No results...")
-                .block(block)
-                .style(Style::default().fg(Color::DarkGray)),
+                .block(results_block)
+                .style(SUBTLE_STYLE),
             area,
         );
         return;
     }
 
     let list = List::new(items)
-        .block(block)
-        .highlight_style(Style::default().bg(Color::Blue));
+        .block(results_block)
+        .highlight_style(HIGHLIGHT_STYLE);
 
     frame.render_stateful_widget(list, area, list_state);
 }
@@ -118,8 +127,8 @@ fn render_input_field(frame: &mut Frame, area: Rect, input: &str) {
 
     frame.render_widget(input_block, area);
 
-    let input_text = Paragraph::new("> ".to_string() + input)
-        .style(Style::default().fg(Color::Green));
+    let input_text =
+        Paragraph::new("> ".to_string() + input).style(INPUT_TEXT_STYLE);
 
     frame.render_widget(
         input_text,
@@ -133,7 +142,7 @@ fn render_input_field(frame: &mut Frame, area: Rect, input: &str) {
 fn render_help_hint(frame: &mut Frame, area: Rect) {
     let help_hint = Paragraph::new("C-h: Help | Esc: Quit")
         .alignment(Alignment::Center)
-        .style(Style::default().fg(Color::DarkGray));
+        .style(SUBTLE_STYLE);
 
     frame.render_widget(help_hint, area);
 }
@@ -147,6 +156,7 @@ fn draw_preview_pane(frame: &mut Frame, chunk: Rect, items: &ItemsState) {
     frame.render_widget(preview, chunk);
 }
 
+// TODO: move this to tmux::interface pass it just the session name?
 fn generate_preview_content(items: &ItemsState) -> String {
     if let Some(selection_idx) = items.list_state.selected()
         && let Some(selection) = items.filtered_items.get(selection_idx)
@@ -160,7 +170,11 @@ fn generate_preview_content(items: &ItemsState) -> String {
 }
 
 fn draw_confirmation_popup(f: &mut Frame) {
-    let popup_area = create_centered_rect(f.area(), 15, 3);
+    let popup_area = create_centered_rect(
+        f.area(),
+        CONFIRMATION_POPUP_WIDTH,
+        CONFIRMATION_POPUP_HEIGHT,
+    );
 
     f.render_widget(Clear, popup_area);
 
@@ -168,7 +182,7 @@ fn draw_confirmation_popup(f: &mut Frame) {
         .title("Confirm")
         .title_alignment(Alignment::Center)
         .borders(Borders::ALL)
-        .style(Style::default().bg(Color::DarkGray));
+        .style(POPUP_STYLE);
 
     let paragraph = Paragraph::new(Line::from("Y/n"))
         .block(block)
@@ -178,29 +192,30 @@ fn draw_confirmation_popup(f: &mut Frame) {
 }
 
 fn draw_help_popup(f: &mut Frame) {
-    let popup_area = create_centered_rect(f.area(), 60, 14);
+    let popup_area =
+        create_centered_rect(f.area(), HELP_POPUP_WIDTH, HELP_POPUP_HEIGHT);
 
     f.render_widget(Clear, popup_area);
 
     let navigation_block = Block::default()
         .title("Navigation")
         .borders(Borders::ALL)
-        .style(Style::default().bg(Color::DarkGray));
+        .style(POPUP_STYLE);
 
     let session_block = Block::default()
         .title("Session Actions")
         .borders(Borders::ALL)
-        .style(Style::default().bg(Color::DarkGray));
+        .style(POPUP_STYLE);
 
     let ui_block = Block::default()
         .title("UI Controls")
         .borders(Borders::ALL)
-        .style(Style::default().bg(Color::DarkGray));
+        .style(POPUP_STYLE);
 
     let popup_block = Block::default()
         .title("Popup")
         .borders(Borders::ALL)
-        .style(Style::default().bg(Color::DarkGray));
+        .style(POPUP_STYLE);
 
     let navigation_text = vec![
         Line::from("Esc/C-c → Close"),
@@ -229,7 +244,10 @@ fn draw_help_popup(f: &mut Frame) {
 
     let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Length(7), Constraint::Length(7)])
+        .constraints([
+            Constraint::Length(HELP_POPUP_HEIGHT / 2),
+            Constraint::Length(HELP_POPUP_HEIGHT / 2),
+        ])
         .split(popup_area);
 
     let top_chunks = Layout::default()
