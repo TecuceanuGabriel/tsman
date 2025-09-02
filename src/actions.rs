@@ -9,6 +9,7 @@ use std::process::Command;
 use crate::cli::{Args, Commands};
 use crate::menu::Menu;
 use crate::menu::item::MenuItem;
+use crate::menu::renderer::DefaultMenuRenderer;
 use crate::persistence::*;
 use crate::terminal_utils;
 use crate::tmux::interface::*;
@@ -189,8 +190,12 @@ pub fn delete(session_name: &str) -> Result<()> {
 fn menu(show_preview: bool, ask_for_confirmation: bool) -> Result<()> {
     let mut terminal = terminal_utils::init()?;
 
-    let mut menu =
-        Menu::new(get_all_sessions()?, show_preview, ask_for_confirmation);
+    let mut menu = Menu::new(
+        get_all_sessions()?,
+        show_preview,
+        ask_for_confirmation,
+        Box::new(DefaultMenuRenderer),
+    );
     menu.run(&mut terminal)?;
 
     terminal_utils::restore(terminal)?;

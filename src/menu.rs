@@ -13,13 +13,7 @@ use crossterm::{
     },
 };
 
-use ratatui::{
-    DefaultTerminal, Frame,
-    layout::{Alignment, Constraint, Direction, Flex, Layout, Margin, Rect},
-    style::{Color, Style},
-    text::Line,
-    widgets::{Block, Borders, Clear, List, Paragraph},
-};
+use ratatui::DefaultTerminal;
 
 use anyhow::Result;
 
@@ -32,8 +26,7 @@ pub mod ui_flags;
 use crate::menu::item::MenuItem;
 use crate::menu::menu_state::MenuState;
 use crate::menu::renderer::*;
-use crate::tmux::{self, session::Session};
-use crate::{actions, persistence::load_session_from_config};
+use crate::{actions, tmux};
 
 /// Menu state.
 
@@ -67,8 +60,9 @@ impl Menu {
     /// # Arguments
     /// * `terminal` - The terminal backend to draw on.
     pub fn run(&mut self, terminal: &mut DefaultTerminal) -> Result<()> {
-        while !self.should_exit {
-            terminal.draw(|frame| self.renderer.draw(frame, &self.state))?;
+        while !self.state.should_exit {
+            terminal
+                .draw(|frame| self.renderer.draw(frame, &mut self.state))?;
             self.handle_events(terminal)?;
         }
 
@@ -94,11 +88,11 @@ impl Menu {
             return Ok(());
         }
 
-        if self.ui_flags.show_confirmation_popup {
+        if self.state.ui_flags.show_confirmation_popup {
             return self.handle_confirmation_popup_key(key);
         }
 
-        if self.ui_flags.show_help {
+        if self.state.ui_flags.show_help {
             return self.handle_help_popup_key(key);
         }
 
@@ -113,10 +107,10 @@ impl Menu {
         match key.code {
             KeyCode::Char('y' | 'Y') | KeyCode::Enter => {
                 self.handle_delete()?;
-                self.ui_flags.show_confirmation_popup = false;
+                self.state.ui_flags.show_confirmation_popup = false;
             }
             KeyCode::Char('n' | 'N' | 'q') | KeyCode::Esc => {
-                self.ui_flags.show_confirmation_popup = false;
+                self.state.ui_flags.show_confirmation_popup = false;
             }
             _ => {}
         }
@@ -127,12 +121,13 @@ impl Menu {
     fn handle_help_popup_key(&mut self, key: KeyEvent) -> Result<()> {
         if key.modifiers.contains(KeyModifiers::CONTROL) {
             if let KeyCode::Char('h' | 'c') = key.code {
-                self.ui_flags.show_help = !self.ui_flags.show_help
+                self.state.ui_flags.show_help = !self.state.ui_flags.show_help
             }
         } else {
             match key.code {
                 KeyCode::Char('q') | KeyCode::Esc | KeyCode::Enter => {
-                    self.ui_flags.show_help = !self.ui_flags.show_help
+                    self.state.ui_flags.show_help =
+                        !self.state.ui_flags.show_help
                 }
                 _ => {}
             }
@@ -147,27 +142,28 @@ impl Menu {
         terminal: &mut DefaultTerminal,
     ) -> Result<()> {
         match key.code {
-            KeyCode::Char('p') => self.items.move_selection(-1),
-            KeyCode::Char('n') => self.items.move_selection(1),
+            KeyCode::Char('p') => self.state.items.move_selection(-1),
+            KeyCode::Char('n') => self.state.items.move_selection(1),
             KeyCode::Char('e') => self.handle_edit(terminal)?,
             KeyCode::Char('s') => self.handle_save()?,
             KeyCode::Char('d') => {
-                if self.ui_flags.ask_for_confirmation {
-                    self.ui_flags.show_confirmation_popup = true;
+                if self.state.ui_flags.ask_for_confirmation {
+                    self.state.ui_flags.show_confirmation_popup = true;
                 } else {
                     self.handle_delete()?;
                 }
             }
             KeyCode::Char('k') => self.handle_kill()?,
-            KeyCode::Char('c') => self.should_exit = true,
+            KeyCode::Char('c') => self.state.should_exit = true,
             KeyCode::Char('t') => {
-                self.ui_flags.show_preview = !self.ui_flags.show_preview
+                self.state.ui_flags.show_preview =
+                    !self.state.ui_flags.show_preview
             }
             KeyCode::Char('h') => {
-                self.ui_flags.show_help = !self.ui_flags.show_help
+                self.state.ui_flags.show_help = !self.state.ui_flags.show_help
             }
             KeyCode::Char('w') => {
-                self.items.remove_last_word_from_input();
+                self.state.items.remove_last_word_from_input();
             }
             _ => {}
         }
@@ -177,17 +173,17 @@ impl Menu {
     fn handle_regular_key(&mut self, key: KeyEvent) -> Result<()> {
         match key.code {
             KeyCode::Char(c) => {
-                self.items.input.push(c);
-                self.items.update_filter_and_reset();
+                self.state.items.input.push(c);
+                self.state.items.update_filter_and_reset();
             }
             KeyCode::Backspace => {
-                self.items.input.pop();
-                self.items.update_filter_and_reset();
+                self.state.items.input.pop();
+                self.state.items.update_filter_and_reset();
             }
-            KeyCode::Up => self.items.move_selection(-1),
-            KeyCode::Down => self.items.move_selection(1),
+            KeyCode::Up => self.state.items.move_selection(-1),
+            KeyCode::Down => self.state.items.move_selection(1),
             KeyCode::Enter => self.handle_open()?,
-            KeyCode::Esc => self.should_exit = true,
+            KeyCode::Esc => self.state.should_exit = true,
             _ => {}
         }
 
@@ -195,57 +191,70 @@ impl Menu {
     }
 
     fn handle_open(&mut self) -> Result<()> {
-        if let Some(selection_idx) = self.items.list_state.selected() {
-            let selection = match self.items.filtered_items.get(selection_idx) {
-                Some(s) => s.clone(),
-                None => return Ok(()),
-            };
+        if let Some(selection_idx) = self.state.items.list_state.selected() {
+            let selection =
+                match self.state.items.filtered_items.get(selection_idx) {
+                    Some(s) => s.clone(),
+                    None => return Ok(()),
+                };
 
             actions::open(&selection.name)?;
-            self.should_exit = true;
+            self.state.should_exit = true;
         }
 
         Ok(())
     }
 
     fn handle_delete(&mut self) -> Result<()> {
-        if let Some(selection_idx) = self.items.list_state.selected() {
-            let selection = match self.items.filtered_items.get(selection_idx) {
-                Some(s) => s.clone(),
-                None => return Ok(()),
-            };
+        if let Some(selection_idx) = self.state.items.list_state.selected() {
+            let selection =
+                match self.state.items.filtered_items.get(selection_idx) {
+                    Some(s) => s.clone(),
+                    None => return Ok(()),
+                };
 
             if selection.saved {
                 actions::delete(&selection.name)?;
-                self.items.update_item(&selection.name, Some(false), None);
+                self.state.items.update_item(
+                    &selection.name,
+                    Some(false),
+                    None,
+                );
             } else {
                 tmux::interface::close_session(&selection.name)?;
-                self.items.update_item(&selection.name, None, Some(false));
+                self.state.items.update_item(
+                    &selection.name,
+                    None,
+                    Some(false),
+                );
             }
 
             if (selection.saved && !selection.active)
                 || (!selection.saved && selection.active)
             {
-                self.items
+                self.state
+                    .items
                     .all_items
                     .retain(|item| item.name != selection.name);
-                self.items
+                self.state
+                    .items
                     .list_state
                     .select(Some(selection_idx.saturating_sub(1)));
             }
 
-            self.items.update_filter();
+            self.state.items.update_filter();
         }
 
         Ok(())
     }
 
     fn handle_edit(&mut self, terminal: &mut DefaultTerminal) -> Result<()> {
-        if let Some(selection_idx) = self.items.list_state.selected() {
-            let selection = match self.items.filtered_items.get(selection_idx) {
-                Some(s) => s.clone(),
-                None => return Ok(()),
-            };
+        if let Some(selection_idx) = self.state.items.list_state.selected() {
+            let selection =
+                match self.state.items.filtered_items.get(selection_idx) {
+                    Some(s) => s.clone(),
+                    None => return Ok(()),
+                };
 
             if selection.saved {
                 disable_raw_mode()?;
@@ -261,16 +270,19 @@ impl Menu {
     }
 
     fn handle_save(&mut self) -> Result<()> {
-        if let Some(selection_idx) = self.items.list_state.selected() {
-            let selection = match self.items.filtered_items.get(selection_idx) {
-                Some(s) => s.clone(),
-                None => return Ok(()),
-            };
+        if let Some(selection_idx) = self.state.items.list_state.selected() {
+            let selection =
+                match self.state.items.filtered_items.get(selection_idx) {
+                    Some(s) => s.clone(),
+                    None => return Ok(()),
+                };
 
             if !selection.saved {
                 actions::save_target(&selection.name)?;
-                self.items.update_item(&selection.name, Some(true), None);
-                self.items.update_filter();
+                self.state
+                    .items
+                    .update_item(&selection.name, Some(true), None);
+                self.state.items.update_filter();
             }
         }
 
@@ -278,26 +290,33 @@ impl Menu {
     }
 
     fn handle_kill(&mut self) -> Result<()> {
-        if let Some(selection_idx) = self.items.list_state.selected() {
-            let selection = match self.items.filtered_items.get(selection_idx) {
-                Some(s) => s.clone(),
-                None => return Ok(()),
-            };
+        if let Some(selection_idx) = self.state.items.list_state.selected() {
+            let selection =
+                match self.state.items.filtered_items.get(selection_idx) {
+                    Some(s) => s.clone(),
+                    None => return Ok(()),
+                };
 
             if selection.active {
                 tmux::interface::close_session(&selection.name)?;
-                self.items.update_item(&selection.name, None, Some(false));
+                self.state.items.update_item(
+                    &selection.name,
+                    None,
+                    Some(false),
+                );
 
                 if !selection.saved {
-                    self.items
+                    self.state
+                        .items
                         .all_items
                         .retain(|item| item.name != selection.name);
-                    self.items
+                    self.state
+                        .items
                         .list_state
                         .select(Some(selection_idx.saturating_sub(1)));
                 }
 
-                self.items.update_filter();
+                self.state.items.update_filter();
             }
         }
 
