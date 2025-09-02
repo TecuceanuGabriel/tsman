@@ -25,19 +25,18 @@ use anyhow::Result;
 
 pub mod item;
 pub mod items_state;
+pub mod menu_state;
 pub mod ui_flags;
 
 use crate::menu::item::MenuItem;
-use crate::menu::items_state::ItemsState;
-use crate::menu::ui_flags::UiFlags;
+use crate::menu::menu_state::MenuState;
 use crate::tmux::{self, session::Session};
 use crate::{actions, persistence::load_session_from_config};
 
 /// Menu state.
+
 pub struct Menu {
-    items: ItemsState,
-    ui_flags: UiFlags,
-    should_exit: bool,
+    state: MenuState,
 }
 
 impl Menu {
@@ -54,9 +53,7 @@ impl Menu {
         ask_for_confirmation: bool,
     ) -> Self {
         Self {
-            items: ItemsState::new(items),
-            ui_flags: UiFlags::new(show_preview, ask_for_confirmation),
-            should_exit: false,
+            state: MenuState::new(items, show_preview, ask_for_confirmation),
         }
     }
 
