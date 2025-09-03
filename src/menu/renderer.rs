@@ -28,13 +28,13 @@ const HELP_POPUP_WIDTH: u16 = 60;
 const HELP_POPUP_HEIGHT: u16 = 14;
 
 pub trait MenuRenderer {
-    fn draw(&mut self, frame: &mut Frame, state: &mut MenuState);
+    fn draw(&self, frame: &mut Frame, state: &mut MenuState);
 }
 
 pub struct DefaultMenuRenderer;
 
 impl MenuRenderer for DefaultMenuRenderer {
-    fn draw(&mut self, frame: &mut Frame, state: &mut MenuState) {
+    fn draw(&self, frame: &mut Frame, state: &mut MenuState) {
         let chunks = crate_main_layout(frame.area());
         let content_chunks =
             create_content_layout(chunks[0], state.ui_flags.show_preview);
