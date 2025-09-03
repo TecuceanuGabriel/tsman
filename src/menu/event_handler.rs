@@ -36,11 +36,7 @@ impl EventHandler for DefaultEventHandler {
 
 fn handle_confirmation_popup_key(key: KeyEvent) -> MenuAction {
     match key.code {
-        KeyCode::Char('y' | 'Y') | KeyCode::Enter => {
-            // self.handle_delete()?;
-            // self.state.ui_flags.show_confirmation_popup = false;
-            return MenuAction::Delete;
-        }
+        KeyCode::Char('y' | 'Y') | KeyCode::Enter => return MenuAction::Delete,
         KeyCode::Char('n' | 'N' | 'q') | KeyCode::Esc => {
             return MenuAction::HideConfirmation;
         }
@@ -71,14 +67,7 @@ fn handle_modifier_key_combo(key: KeyEvent) -> MenuAction {
         KeyCode::Char('n') => MenuAction::MoveSelection(1),
         KeyCode::Char('e') => MenuAction::Edit,
         KeyCode::Char('s') => MenuAction::Save,
-        KeyCode::Char('d') => {
-            // TODO: move to handle_delete
-            if self.state.ui_flags.ask_for_confirmation {
-                MenuAction::ShowConfirmation
-            } else {
-                MenuAction::Delete
-            }
-        }
+        KeyCode::Char('d') => MenuAction::Delete,
         KeyCode::Char('k') => MenuAction::Kill,
         KeyCode::Char('c') => MenuAction::Exit,
         KeyCode::Char('t') => MenuAction::TogglePreview,

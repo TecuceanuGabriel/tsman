@@ -85,6 +85,15 @@ fn handle_open(state: &mut MenuState) -> Result<()> {
 }
 
 fn handle_delete(state: &mut MenuState) -> Result<()> {
+    if state.ui_flags.ask_for_confirmation
+        && !state.ui_flags.show_confirmation_popup
+    {
+        state.ui_flags.show_confirmation_popup = true;
+        return Ok(());
+    }
+
+    state.ui_flags.show_confirmation_popup = false;
+
     if let Some(selection_idx) = state.items.list_state.selected() {
         let selection = match state.items.filtered_items.get(selection_idx) {
             Some(s) => s.clone(),
@@ -118,10 +127,7 @@ fn handle_delete(state: &mut MenuState) -> Result<()> {
     Ok(())
 }
 
-fn handle_edit(
-    state: &mut MenuState,
-    terminal: &mut DefaultTerminal,
-) -> Result<()> {
+fn handle_edit(state: &mut MenuState) -> Result<()> {
     if let Some(selection_idx) = state.items.list_state.selected() {
         let selection = match state.items.filtered_items.get(selection_idx) {
             Some(s) => s.clone(),
@@ -129,12 +135,12 @@ fn handle_edit(
         };
 
         if selection.saved {
-            disable_raw_mode()?;
-            execute!(io::stdout(), LeaveAlternateScreen)?;
+            // disable_raw_mode()?;
+            // execute!(io::stdout(), LeaveAlternateScreen)?;
             actions::edit(Some(&selection.name))?;
-            enable_raw_mode()?;
-            execute!(io::stdout(), EnterAlternateScreen)?;
-            terminal.clear()?;
+            // enable_raw_mode()?;
+            // execute!(io::stdout(), EnterAlternateScreen)?;
+            // terminal.clear()?;
         }
     }
 
