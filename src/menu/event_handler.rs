@@ -1,4 +1,3 @@
-use anyhow::Result;
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 
 use crate::menu::menu_state::MenuState;
@@ -7,9 +6,9 @@ pub trait EventHandler {
     fn handle_event(&mut self, event: Event, state: &MenuState);
 }
 
-pub struct DefaultEventHanlder;
+pub struct DefaultEventHandler;
 
-impl EventHandler for DefaultEventHanlder {
+impl EventHandler for DefaultEventHandler {
     fn handle_event(&mut self, event: Event, state: &MenuState) {
         if let Event::Key(key) = event {
             if key.kind != KeyEventKind::Press {
