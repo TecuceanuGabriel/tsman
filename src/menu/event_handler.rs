@@ -1,6 +1,6 @@
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 
-use crate::menu::{menu_action::MenuAction, menu_state::MenuState};
+use crate::menu::{action::MenuAction, state::MenuState};
 
 pub trait EventHandler {
     fn handle_event(&self, event: Event, state: &MenuState) -> MenuAction;

@@ -8,7 +8,7 @@ use std::process::Command;
 
 use crate::cli::{Args, Commands};
 use crate::menu::Menu;
-use crate::menu::action_dispacher::DefaultActionDispacher;
+use crate::menu::action_dispatcher::DefaultActionDispacher;
 use crate::menu::event_handler::DefaultEventHandler;
 use crate::menu::item::MenuItem;
 use crate::menu::renderer::DefaultMenuRenderer;

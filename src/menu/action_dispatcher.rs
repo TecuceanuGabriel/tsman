@@ -10,10 +10,10 @@ use crossterm::{
 };
 use ratatui::DefaultTerminal;
 
-use crate::menu::menu_action::MenuAction;
-use crate::{actions, menu::menu_state::MenuState, tmux};
+use crate::menu::action::MenuAction;
+use crate::{actions, menu::state::MenuState, tmux};
 
-pub trait ActionDispacher {
+pub trait ActionDispatcher {
     fn dispach(
         &self,
         action: MenuAction,
@@ -24,7 +24,7 @@ pub trait ActionDispacher {
 
 pub struct DefaultActionDispacher;
 
-impl ActionDispacher for DefaultActionDispacher {
+impl ActionDispatcher for DefaultActionDispacher {
     fn dispach(
         &self,
         action: MenuAction,

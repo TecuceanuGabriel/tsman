@@ -9,7 +9,7 @@ use ratatui::{
 };
 
 use crate::{
-    menu::{item::MenuItem, items_state::ItemsState, menu_state::MenuState},
+    menu::{item::MenuItem, items_state::ItemsState, state::MenuState},
     persistence::load_session_from_config,
     tmux::session::Session,
 };

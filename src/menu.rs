@@ -7,20 +7,20 @@ use ratatui::DefaultTerminal;
 
 use anyhow::Result;
 
-pub mod action_dispacher;
+pub mod action;
+pub mod action_dispatcher;
 pub mod event_handler;
 pub mod item;
 pub mod items_state;
-pub mod menu_action;
-pub mod menu_state;
 pub mod renderer;
+pub mod state;
 pub mod ui_flags;
 
-use crate::menu::action_dispacher::*;
+use crate::menu::action_dispatcher::*;
 use crate::menu::event_handler::*;
 use crate::menu::item::MenuItem;
-use crate::menu::menu_state::MenuState;
 use crate::menu::renderer::*;
+use crate::menu::state::MenuState;
 
 /// Menu state.
 
@@ -28,7 +28,7 @@ pub struct Menu {
     state: MenuState,
     renderer: Box<dyn MenuRenderer>,
     event_handler: Box<dyn EventHandler>,
-    action_dispacher: Box<dyn ActionDispacher>,
+    action_dispacher: Box<dyn ActionDispatcher>,
 }
 
 impl Menu {
@@ -45,7 +45,7 @@ impl Menu {
         ask_for_confirmation: bool,
         renderer: Box<dyn MenuRenderer>,
         event_handler: Box<dyn EventHandler>,
-        action_dispacher: Box<dyn ActionDispacher>,
+        action_dispacher: Box<dyn ActionDispatcher>,
     ) -> Self {
         Self {
             state: MenuState::new(items, show_preview, ask_for_confirmation),
