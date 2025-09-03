@@ -26,6 +26,12 @@ impl ItemsState {
         }
     }
 
+    pub fn get_selected_item(&self) -> Option<(usize, MenuItem)> {
+        self.list_state.selected().and_then(|idx| {
+            self.filtered_items.get(idx).map(|item| (idx, item.clone()))
+        })
+    }
+
     pub fn update_item(
         &mut self,
         name: &str,
@@ -65,6 +71,11 @@ impl ItemsState {
         }
 
         self.update_filter_and_reset();
+    }
+
+    pub fn remove_item(&mut self, idx: usize, item: MenuItem) {
+        self.all_items.retain(|i| i.name != item.name);
+        self.list_state.select(Some(idx.saturating_sub(1)));
     }
 
     pub fn update_filter_and_reset(&mut self) {

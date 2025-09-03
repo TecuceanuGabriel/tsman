@@ -156,17 +156,18 @@ fn draw_preview_pane(frame: &mut Frame, chunk: Rect, items: &ItemsState) {
     frame.render_widget(preview, chunk);
 }
 
-// TODO: move this to actions? pass only session name
 fn generate_preview_content(items: &ItemsState) -> String {
-    if let Some(selection_idx) = items.list_state.selected()
-        && let Some(selection) = items.filtered_items.get(selection_idx)
-        && let Ok(session_str) = load_session_from_config(&selection.name)
-    {
-        let session: Session = serde_yaml::from_str(&session_str).ok().unwrap();
-        return session.get_preview();
-    }
+    let Some((_, selection)) = items.get_selected_item() else {
+        return String::new();
+    };
 
-    "".to_string()
+    load_session_from_config(&selection.name)
+        .ok()
+        .and_then(|session_str| {
+            serde_yaml::from_str::<Session>(&session_str).ok()
+        })
+        .map(|session| session.get_preview())
+        .unwrap_or_default()
 }
 
 fn draw_confirmation_popup(f: &mut Frame) {

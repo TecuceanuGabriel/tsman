@@ -63,17 +63,17 @@ impl Menu {
         while !self.state.should_exit {
             terminal
                 .draw(|frame| self.renderer.draw(frame, &mut self.state))?;
-            self.handle_events()?;
-        }
 
-        Ok(())
-    }
-
-    fn handle_events(&mut self) -> Result<()> {
-        if event::poll(Duration::from_millis(50))? {
-            let event = event::read()?;
-            let action = self.event_handler.handle_event(event, &self.state);
-            self.action_dispacher.dispach(action, &mut self.state)?;
+            if event::poll(Duration::from_millis(50))? {
+                let event = event::read()?;
+                let action =
+                    self.event_handler.handle_event(event, &self.state);
+                self.action_dispacher.dispach(
+                    action,
+                    &mut self.state,
+                    terminal,
+                )?;
+            }
         }
 
         Ok(())

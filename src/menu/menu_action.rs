@@ -11,7 +11,6 @@ pub enum MenuAction {
     RemoveLastWord,
     TogglePreview,
     ToggleHelp,
-    ShowConfirmation,
     HideConfirmation,
     Exit,
     NOP,
