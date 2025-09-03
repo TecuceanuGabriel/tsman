@@ -72,7 +72,8 @@ impl Menu {
     fn handle_events(&mut self) -> Result<()> {
         if event::poll(Duration::from_millis(50))? {
             let event = event::read()?;
-            self.event_handler.handle_event(event, &self.state);
+            let action = self.event_handler.handle_event(event, &self.state);
+            self.action_dispacher.dispach(action, &mut self.state);
         }
 
         Ok(())
