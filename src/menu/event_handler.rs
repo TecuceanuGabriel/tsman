@@ -11,11 +11,11 @@ pub struct DefaultEventHandler;
 impl EventHandler for DefaultEventHandler {
     fn handle_event(&self, event: Event, state: &MenuState) -> MenuAction {
         let Event::Key(key) = event else {
-            return MenuAction::NOP;
+            return MenuAction::Nop;
         };
 
         if key.kind != KeyEventKind::Press {
-            return MenuAction::NOP;
+            return MenuAction::Nop;
         }
 
         if state.ui_flags.show_confirmation_popup {
@@ -32,11 +32,11 @@ impl EventHandler for DefaultEventHandler {
 
 fn handle_confirmation_popup_key(key: KeyEvent) -> MenuAction {
     match key.code {
-        KeyCode::Char('y' | 'Y') | KeyCode::Enter => return MenuAction::Delete,
+        KeyCode::Char('y' | 'Y') | KeyCode::Enter => MenuAction::Delete,
         KeyCode::Char('n' | 'N' | 'q') | KeyCode::Esc => {
-            return MenuAction::HideConfirmation;
+            MenuAction::HideConfirmation
         }
-        _ => return MenuAction::NOP,
+        _ => MenuAction::Nop,
     }
 }
 
@@ -46,7 +46,7 @@ fn handle_help_popup_key(key: KeyEvent) -> MenuAction {
         (false, KeyCode::Char('q') | KeyCode::Esc | KeyCode::Enter) => {
             MenuAction::ToggleHelp
         }
-        _ => MenuAction::NOP,
+        _ => MenuAction::Nop,
     }
 }
 
@@ -70,6 +70,6 @@ fn handle_normal_mode_key(key: KeyEvent) -> MenuAction {
         (false, KeyCode::Enter) => MenuAction::Open,
         (false, KeyCode::Esc) => MenuAction::Exit,
 
-        _ => MenuAction::NOP,
+        _ => MenuAction::Nop,
     }
 }

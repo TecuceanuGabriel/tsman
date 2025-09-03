@@ -13,5 +13,5 @@ pub enum MenuAction {
     ToggleHelp,
     HideConfirmation,
     Exit,
-    NOP,
+    Nop,
 }

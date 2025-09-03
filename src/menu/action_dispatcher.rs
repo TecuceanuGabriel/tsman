@@ -71,7 +71,7 @@ impl ActionDispatcher for DefaultActionDispacher {
                 state.should_exit = true;
                 Ok(())
             }
-            MenuAction::NOP => Ok(()),
+            MenuAction::Nop => Ok(()),
         }
     }
 }

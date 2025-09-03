@@ -23,7 +23,6 @@ use crate::menu::renderer::*;
 use crate::menu::state::MenuState;
 
 /// Menu state.
-
 pub struct Menu {
     state: MenuState,
     renderer: Box<dyn MenuRenderer>,

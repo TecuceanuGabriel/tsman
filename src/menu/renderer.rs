@@ -97,7 +97,7 @@ fn create_content_layout(area: Rect, show_preview: bool) -> Rc<[Rect]> {
 fn render_results_list(
     frame: &mut Frame,
     area: Rect,
-    filtered_items: &Vec<MenuItem>,
+    filtered_items: &[MenuItem],
     list_state: &mut ListState,
 ) {
     let items: Vec<String> =
