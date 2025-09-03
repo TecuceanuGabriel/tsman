@@ -7,8 +7,13 @@ use std::fs;
 use std::process::Command;
 
 use crate::cli::{Args, Commands};
-use crate::menu::{self, MenuAction, MenuItem, MenuUi};
+use crate::menu::Menu;
+use crate::menu::action_dispatcher::DefaultActionDispacher;
+use crate::menu::event_handler::DefaultEventHandler;
+use crate::menu::item::MenuItem;
+use crate::menu::renderer::DefaultMenuRenderer;
 use crate::persistence::*;
+use crate::terminal_utils;
 use crate::tmux::interface::*;
 use crate::tmux::session::Session;
 
@@ -81,7 +86,7 @@ fn save(session_name: Option<&str>) -> Result<()> {
 ///
 /// # Errors
 /// Same as [`save`].
-fn save_target(session_name: &str) -> Result<()> {
+pub fn save_target(session_name: &str) -> Result<()> {
     let current_session = get_session(Some(session_name))
         .context("Failed to get current session")?;
 
@@ -108,7 +113,7 @@ fn save_target(session_name: &str) -> Result<()> {
 /// - The session cannot be found.
 /// - YAML deserialization fails.
 /// - tmux restoration commands fail.
-fn open(session_name: &str) -> Result<()> {
+pub fn open(session_name: &str) -> Result<()> {
     if is_active_session(session_name)? {
         attach_to_session(session_name)?;
         return Ok(());
@@ -137,7 +142,7 @@ fn open(session_name: &str) -> Result<()> {
 /// Returns an error if:
 /// - The session name cannot be determined.
 /// - The editor command fails.
-fn edit(session_name: Option<&str>) -> Result<()> {
+pub fn edit(session_name: Option<&str>) -> Result<()> {
     let path = if let Some(name) = session_name {
         get_config_file_path(name)?
     } else {
@@ -162,7 +167,7 @@ fn edit(session_name: Option<&str>) -> Result<()> {
 ///
 /// # Errors
 /// Returns an error if the file cannot be removed.
-fn delete(session_name: &str) -> Result<()> {
+pub fn delete(session_name: &str) -> Result<()> {
     let path = get_config_file_path(session_name)?;
     fs::remove_file(path)?;
     Ok(())
@@ -185,23 +190,20 @@ fn delete(session_name: &str) -> Result<()> {
 /// Returns an error if the menu fails to initialize, display, or perform
 /// any action.
 fn menu(show_preview: bool, ask_for_confirmation: bool) -> Result<()> {
-    let mut terminal = menu::init()?;
+    let mut terminal = terminal_utils::init()?;
 
-    let mut menu_ui =
-        MenuUi::new(get_all_sessions()?, show_preview, ask_for_confirmation);
-    menu_ui.run(&mut terminal)?;
+    let mut menu = Menu::new(
+        get_all_sessions()?,
+        show_preview,
+        ask_for_confirmation,
+        Box::new(DefaultMenuRenderer),
+        Box::new(DefaultEventHandler),
+        Box::new(DefaultActionDispacher),
+    );
 
-    menu::restore(terminal)?;
+    menu.run(&mut terminal)?;
 
-    while let Some(item) = menu_ui.dequeue_action()? {
-        match item.action {
-            MenuAction::Save => save_target(&item.selection)?,
-            MenuAction::Open => open(&item.selection)?,
-            MenuAction::Edit => edit(Some(&item.selection))?,
-            MenuAction::Delete => delete(&item.selection)?,
-            MenuAction::Close => close_session(&item.selection)?,
-        }
-    }
+    terminal_utils::restore(terminal)?;
 
     Ok(())
 }
