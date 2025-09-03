@@ -8,6 +8,7 @@ use std::process::Command;
 
 use crate::cli::{Args, Commands};
 use crate::menu::Menu;
+use crate::menu::event_handler::DefaultEventHanlder;
 use crate::menu::item::MenuItem;
 use crate::menu::renderer::DefaultMenuRenderer;
 use crate::persistence::*;
@@ -195,7 +196,9 @@ fn menu(show_preview: bool, ask_for_confirmation: bool) -> Result<()> {
         show_preview,
         ask_for_confirmation,
         Box::new(DefaultMenuRenderer),
+        Box::new(DefaultEventHanlder),
     );
+
     menu.run(&mut terminal)?;
 
     terminal_utils::restore(terminal)?;

@@ -156,7 +156,7 @@ fn draw_preview_pane(frame: &mut Frame, chunk: Rect, items: &ItemsState) {
     frame.render_widget(preview, chunk);
 }
 
-// TODO: move this to tmux::interface pass it just the session name?
+// TODO: move this to actions? pass only session name
 fn generate_preview_content(items: &ItemsState) -> String {
     if let Some(selection_idx) = items.list_state.selected()
         && let Some(selection) = items.filtered_items.get(selection_idx)
