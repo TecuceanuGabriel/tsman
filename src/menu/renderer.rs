@@ -17,7 +17,7 @@ use crate::{
 const HIGHLIGHT_STYLE: Style = Style::new().bg(Color::Blue);
 const SUBTLE_STYLE: Style = Style::new().fg(Color::DarkGray);
 const POPUP_STYLE: Style = Style::new().fg(Color::Blue).bg(Color::Gray);
-const INPUT_TEXT_STYLE: Style = Style::new().fg(Color::Green);
+const PROMPT_STYLE: Style = Style::new().fg(Color::Green);
 
 const PREVIEW_WIDTH_RATIO: u16 = 40;
 
@@ -122,21 +122,25 @@ fn render_results_list(
     frame.render_stateful_widget(list, area, list_state);
 }
 
-fn render_input_field(frame: &mut Frame, area: Rect, state: &MenuState) {
+fn render_input_field(frame: &mut Frame, area: Rect, state: &mut MenuState) {
     let input_block = Block::default().borders(Borders::ALL).title("Search");
 
     frame.render_widget(input_block, area);
 
-    // let input_text = Paragraph::new("> ".to_string() + &state.items.input)
-    //     .style(INPUT_TEXT_STYLE);
+    let input_area = area.inner(Margin {
+        horizontal: 1,
+        vertical: 1,
+    });
 
-    frame.render_widget(
-        &state.input,
-        area.inner(Margin {
-            horizontal: 1,
-            vertical: 1,
-        }),
-    );
+    let chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Length(2), Constraint::Min(1)].as_ref())
+        .split(input_area);
+
+    let prompt = Paragraph::new("> ").style(PROMPT_STYLE);
+    frame.render_widget(prompt, chunks[0]);
+
+    frame.render_widget(&state.input, chunks[1]);
 }
 
 fn render_help_hint(frame: &mut Frame, area: Rect) {

@@ -1,3 +1,4 @@
+use ratatui::style::Style;
 use tui_textarea::TextArea;
 
 use crate::menu::{item::MenuItem, items_state::ItemsState, ui_flags::UiFlags};
@@ -15,8 +16,11 @@ impl<'a> MenuState<'a> {
         show_preview: bool,
         ask_for_confirmation: bool,
     ) -> Self {
+        let mut input = TextArea::default();
+        input.set_cursor_line_style(Style::default());
+
         Self {
-            input: TextArea::default(),
+            input,
             items: ItemsState::new(items),
             ui_flags: UiFlags::new(show_preview, ask_for_confirmation),
             should_exit: false,
