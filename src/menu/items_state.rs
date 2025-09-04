@@ -6,7 +6,6 @@ use crate::menu::item::MenuItem;
 pub struct ItemsState {
     pub all_items: Vec<MenuItem>,
     pub filtered_items: Vec<MenuItem>,
-    pub input: String,
     pub list_state: ListState,
 
     matcher: SkimMatcherV2,
@@ -20,7 +19,6 @@ impl ItemsState {
         Self {
             all_items: items.clone(),
             filtered_items: items,
-            input: String::new(),
             list_state,
             matcher: fuzzy_matcher::skim::SkimMatcherV2::default(),
         }
@@ -59,39 +57,25 @@ impl ItemsState {
         }
     }
 
-    pub fn remove_last_word_from_input(&mut self) {
-        if self.input.is_empty() {
-            return;
-        }
-
-        if let Some(last_space) = self.input.trim_end().rfind(' ') {
-            self.input.truncate(last_space);
-        } else {
-            self.input.clear();
-        }
-
-        self.update_filter_and_reset();
-    }
-
     pub fn remove_item(&mut self, idx: usize, item: MenuItem) {
         self.all_items.retain(|i| i.name != item.name);
         self.list_state.select(Some(idx.saturating_sub(1)));
     }
 
-    pub fn update_filter_and_reset(&mut self) {
-        self.update_filter();
+    pub fn update_filter_and_reset(&mut self, input: &str) {
+        self.update_filter(input);
         self.reset_position();
     }
 
-    pub fn update_filter(&mut self) {
-        if self.input.is_empty() {
+    pub fn update_filter(&mut self, input: &str) {
+        if input.is_empty() {
             self.filtered_items = self.all_items.clone();
         } else {
             self.filtered_items = self
                 .all_items
                 .iter()
                 .filter(|item| {
-                    self.matcher.fuzzy_match(&item.name, &self.input).is_some()
+                    self.matcher.fuzzy_match(&item.name, input).is_some()
                 })
                 .cloned()
                 .collect();

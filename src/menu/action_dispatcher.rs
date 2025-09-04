@@ -42,17 +42,24 @@ impl ActionDispatcher for DefaultActionDispacher {
                 Ok(())
             }
             MenuAction::RemoveLastWord => {
-                state.items.remove_last_word_from_input();
+                state.input.delete_word();
+                state
+                    .items
+                    .update_filter_and_reset(&state.input.lines().join("\n"));
                 Ok(())
             }
             MenuAction::AppendToInput(c) => {
-                state.items.input.push(c);
-                state.items.update_filter_and_reset();
+                state.input.insert_char(c);
+                state
+                    .items
+                    .update_filter_and_reset(&state.input.lines().join("\n"));
                 Ok(())
             }
             MenuAction::DeleteFromInput => {
-                state.items.input.pop();
-                state.items.update_filter_and_reset();
+                state.input.delete_char();
+                state
+                    .items
+                    .update_filter_and_reset(&state.input.lines().join("\n"));
                 Ok(())
             }
             MenuAction::TogglePreview => {
@@ -115,7 +122,7 @@ fn handle_delete(state: &mut MenuState) -> Result<()> {
         state.items.remove_item(idx, selection);
     }
 
-    state.items.update_filter();
+    state.items.update_filter(&state.input.lines().join("\n"));
 
     Ok(())
 }
@@ -150,7 +157,7 @@ fn handle_save(state: &mut MenuState) -> Result<()> {
     if !selection.saved {
         actions::save_target(&selection.name)?;
         state.items.update_item(&selection.name, Some(true), None);
-        state.items.update_filter();
+        state.items.update_filter(&state.input.lines().join("\n"));
     }
 
     Ok(())
@@ -169,7 +176,7 @@ fn handle_kill(state: &mut MenuState) -> Result<()> {
             state.items.remove_item(idx, selection);
         }
 
-        state.items.update_filter();
+        state.items.update_filter(&state.input.lines().join("\n"));
     }
 
     Ok(())

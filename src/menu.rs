@@ -23,14 +23,14 @@ use crate::menu::renderer::*;
 use crate::menu::state::MenuState;
 
 /// Menu state.
-pub struct Menu {
-    state: MenuState,
+pub struct Menu<'a> {
+    state: MenuState<'a>,
     renderer: Box<dyn MenuRenderer>,
     event_handler: Box<dyn EventHandler>,
     action_dispacher: Box<dyn ActionDispatcher>,
 }
 
-impl Menu {
+impl<'a> Menu<'a> {
     /// Creates a new [`MenuUi`] instance.
     ///
     /// # Arguments

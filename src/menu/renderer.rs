@@ -51,7 +51,7 @@ impl MenuRenderer for DefaultMenuRenderer {
             &mut state.items.list_state,
         );
 
-        render_input_field(frame, left_content_chunks[1], &state.items.input);
+        render_input_field(frame, left_content_chunks[1], state);
 
         render_help_hint(frame, chunks[1]);
 
@@ -122,16 +122,16 @@ fn render_results_list(
     frame.render_stateful_widget(list, area, list_state);
 }
 
-fn render_input_field(frame: &mut Frame, area: Rect, input: &str) {
+fn render_input_field(frame: &mut Frame, area: Rect, state: &MenuState) {
     let input_block = Block::default().borders(Borders::ALL).title("Search");
 
     frame.render_widget(input_block, area);
 
-    let input_text =
-        Paragraph::new("> ".to_string() + input).style(INPUT_TEXT_STYLE);
+    // let input_text = Paragraph::new("> ".to_string() + &state.items.input)
+    //     .style(INPUT_TEXT_STYLE);
 
     frame.render_widget(
-        input_text,
+        &state.input,
         area.inner(Margin {
             horizontal: 1,
             vertical: 1,
