@@ -4,30 +4,44 @@ use ratatui::widgets::ListState;
 use crate::menu::item::MenuItem;
 
 pub struct ItemsState {
-    pub all_items: Vec<MenuItem>,
-    pub filtered_items: Vec<MenuItem>,
+    pub items: Vec<MenuItem>,
+    pub filtered_items_idx: Vec<usize>,
     pub list_state: ListState,
 
     matcher: SkimMatcherV2,
 }
 
 impl ItemsState {
-    pub fn new(items: Vec<MenuItem>) -> Self {
+    pub fn new(mut items: Vec<MenuItem>) -> Self {
         let mut list_state = ListState::default();
         list_state.select(Some(0));
 
-        Self {
-            all_items: items.clone(),
-            filtered_items: items,
+        sort_items(&mut items);
+
+        let mut state = Self {
+            filtered_items_idx: (0..items.len()).collect(),
+            items,
             list_state,
             matcher: fuzzy_matcher::skim::SkimMatcherV2::default(),
-        }
+        };
+
+        state.update_filter("");
+
+        state
     }
 
     pub fn get_selected_item(&self) -> Option<(usize, MenuItem)> {
-        self.list_state.selected().and_then(|idx| {
-            self.filtered_items.get(idx).map(|item| (idx, item.clone()))
-        })
+        let idx = self.list_state.selected()?;
+        let &item_idx = self.filtered_items_idx.get(idx)?;
+        let item = self.items.get(item_idx)?.clone();
+        Some((idx, item))
+    }
+
+    pub fn get_filtered_items(&self) -> Vec<&MenuItem> {
+        self.filtered_items_idx
+            .iter()
+            .map(|&idx| self.items.get(idx).unwrap())
+            .collect()
     }
 
     pub fn update_item(
@@ -36,7 +50,7 @@ impl ItemsState {
         saved: Option<bool>,
         active: Option<bool>,
     ) {
-        if let Some(item) = self.all_items.iter_mut().find(|i| i.name == name) {
+        if let Some(item) = self.items.iter_mut().find(|i| i.name == name) {
             if let Some(saved_val) = saved {
                 item.saved = saved_val;
             }
@@ -52,13 +66,14 @@ impl ItemsState {
                 usize::try_from((selection_idx as i32 + delta).max(0))
                     .unwrap_or(0);
             self.list_state.select(Some(
-                new_selected.min(self.filtered_items.len().saturating_sub(1)),
+                new_selected
+                    .min(self.filtered_items_idx.len().saturating_sub(1)),
             ));
         }
     }
 
     pub fn remove_item(&mut self, idx: usize, item: MenuItem) {
-        self.all_items.retain(|i| i.name != item.name);
+        self.items.retain(|i| i.name != item.name);
         self.list_state.select(Some(idx.saturating_sub(1)));
     }
 
@@ -69,24 +84,29 @@ impl ItemsState {
 
     pub fn update_filter(&mut self, input: &str) {
         if input.is_empty() {
-            self.filtered_items = self.all_items.clone();
+            self.filtered_items_idx = (0..self.items.len()).collect();
         } else {
-            self.filtered_items = self
-                .all_items
+            self.filtered_items_idx = self
+                .items
                 .iter()
-                .filter(|item| {
+                .enumerate()
+                .filter(|(_, item)| {
                     self.matcher.fuzzy_match(&item.name, input).is_some()
                 })
-                .cloned()
+                .map(|(idx, _)| idx)
                 .collect();
         }
     }
 
     fn reset_position(&mut self) {
-        if self.filtered_items.is_empty() {
+        if self.filtered_items_idx.is_empty() {
             self.list_state.select(None);
         } else {
             self.list_state.select(Some(0));
         }
     }
+}
+
+fn sort_items(items: &mut [MenuItem]) {
+    items.sort_by(|a, b| b.active.cmp(&a.active).then(a.name.cmp(&b.name)))
 }
