@@ -1,15 +1,15 @@
 use std::rc::Rc;
 
 use ratatui::{
-    Frame,
     layout::{Alignment, Constraint, Direction, Flex, Layout, Margin, Rect},
     style::{Color, Style},
     text::Line,
-    widgets::{Block, Borders, Clear, List, ListState, Paragraph},
+    widgets::{Block, Borders, Clear, List, Paragraph},
+    Frame,
 };
 
 use crate::{
-    menu::{item::MenuItem, items_state::ItemsState, state::MenuState},
+    menu::{items_state::ItemsState, state::MenuState},
     persistence::load_session_from_config,
     tmux::session::Session,
 };
@@ -44,12 +44,7 @@ impl MenuRenderer for DefaultMenuRenderer {
             .constraints([Constraint::Min(3), Constraint::Length(3)])
             .split(content_chunks[0]);
 
-        render_results_list(
-            frame,
-            left_content_chunks[0],
-            &state.items.filtered_items,
-            &mut state.items.list_state,
-        );
+        render_results_list(frame, left_content_chunks[0], &mut state.items);
 
         render_input_field(frame, left_content_chunks[1], state);
 
@@ -97,11 +92,13 @@ fn create_content_layout(area: Rect, show_preview: bool) -> Rc<[Rect]> {
 fn render_results_list(
     frame: &mut Frame,
     area: Rect,
-    filtered_items: &[MenuItem],
-    list_state: &mut ListState,
+    items_state: &mut ItemsState,
 ) {
-    let items: Vec<String> =
-        filtered_items.iter().map(|i| i.to_string()).collect();
+    let items: Vec<String> = items_state
+        .get_filtered_items()
+        .iter()
+        .map(|i| i.to_string())
+        .collect();
 
     let results_block = Block::default().borders(Borders::ALL).title("Results");
 
@@ -119,7 +116,7 @@ fn render_results_list(
         .block(results_block)
         .highlight_style(HIGHLIGHT_STYLE);
 
-    frame.render_stateful_widget(list, area, list_state);
+    frame.render_stateful_widget(list, area, &mut items_state.list_state);
 }
 
 fn render_input_field(frame: &mut Frame, area: Rect, state: &mut MenuState) {
