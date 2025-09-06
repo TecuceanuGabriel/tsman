@@ -1,11 +1,11 @@
 use std::rc::Rc;
 
 use ratatui::{
+    Frame,
     layout::{Alignment, Constraint, Direction, Flex, Layout, Margin, Rect},
     style::{Color, Style},
     text::Line,
     widgets::{Block, Borders, Clear, List, Paragraph},
-    Frame,
 };
 
 use crate::{

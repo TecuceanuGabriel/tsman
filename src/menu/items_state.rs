@@ -1,4 +1,4 @@
-use fuzzy_matcher::{skim::SkimMatcherV2, FuzzyMatcher};
+use fuzzy_matcher::{FuzzyMatcher, skim::SkimMatcherV2};
 use ratatui::widgets::ListState;
 
 use crate::menu::item::MenuItem;
@@ -12,22 +12,22 @@ pub struct ItemsState {
 }
 
 impl ItemsState {
-    pub fn new(items: Vec<MenuItem>) -> Self {
+    pub fn new(mut items: Vec<MenuItem>) -> Self {
         let mut list_state = ListState::default();
         list_state.select(Some(0));
 
-        let all_items = sort_items(&items);
+        sort_items(&mut items);
 
         let mut state = Self {
-            items: all_items,
             filtered_items_idx: (0..items.len()).collect(),
+            items,
             list_state,
             matcher: fuzzy_matcher::skim::SkimMatcherV2::default(),
         };
 
         state.update_filter("");
 
-        return state;
+        state
     }
 
     pub fn get_selected_item(&self) -> Option<(usize, MenuItem)> {
@@ -107,24 +107,6 @@ impl ItemsState {
     }
 }
 
-fn sort_items(items: &Vec<MenuItem>) -> Vec<MenuItem> {
-    let mut items_priorities: Vec<(&MenuItem, u32)> = items
-        .iter()
-        .map(|item| {
-            let mut priority_score = 0u32;
-            if item.active {
-                priority_score += 1;
-            }
-
-            (item, priority_score)
-        })
-        .collect();
-
-    items_priorities
-        .sort_by(|a, b| b.1.cmp(&a.1).then(a.0.name.cmp(&b.0.name)));
-
-    items_priorities
-        .iter()
-        .map(|(item, _)| (*item).clone())
-        .collect()
+fn sort_items(items: &mut [MenuItem]) {
+    items.sort_by(|a, b| b.active.cmp(&a.active).then(a.name.cmp(&b.name)))
 }
