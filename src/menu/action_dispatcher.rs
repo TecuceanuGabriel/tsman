@@ -37,6 +37,7 @@ impl ActionDispatcher for DefaultActionDispacher {
             MenuAction::Edit => handle_edit(state, terminal),
             MenuAction::Save => handle_save(state),
             MenuAction::Kill => handle_kill(state),
+            MenuAction::Reload => handle_reload(state),
             MenuAction::MoveSelection(delta) => {
                 state.items.move_selection(delta);
                 Ok(())
@@ -177,6 +178,18 @@ fn handle_kill(state: &mut MenuState) -> Result<()> {
         }
 
         state.items.update_filter(&state.input.lines().join("\n"));
+    }
+
+    Ok(())
+}
+
+fn handle_reload(state: &mut MenuState) -> Result<()> {
+    let Some((_, selection)) = state.items.get_selected_item() else {
+        return Ok(());
+    };
+
+    if selection.active && selection.saved {
+        actions::reload(&selection.name)?;
     }
 
     Ok(())

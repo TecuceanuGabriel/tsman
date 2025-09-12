@@ -5,6 +5,7 @@ pub enum MenuAction {
     Edit,
     Save,
     Kill,
+    Reload,
     MoveSelection(i32),
     AppendToInput(char),
     DeleteFromInput,

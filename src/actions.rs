@@ -119,6 +119,11 @@ pub fn open(session_name: &str) -> Result<()> {
         return Ok(());
     }
 
+    spawn(session_name)?;
+    attach_to_session(&session_name)
+}
+
+fn spawn(session_name: &str) -> Result<()> {
     let yaml = load_session_from_config(session_name)
         .context("Failed to read session from config file")?;
 
@@ -126,9 +131,7 @@ pub fn open(session_name: &str) -> Result<()> {
         format!("Failed to deserialize session from yaml {yaml}")
     })?;
 
-    restore_session(&session).context("Failed to restore session")?;
-
-    Ok(())
+    restore_session(&session).context("Failed to restore session")
 }
 
 /// Opens the session configuration file in `$EDITOR`.
@@ -170,6 +173,30 @@ pub fn edit(session_name: Option<&str>) -> Result<()> {
 pub fn delete(session_name: &str) -> Result<()> {
     let path = get_config_file_path(session_name)?;
     fs::remove_file(path)?;
+    Ok(())
+}
+
+pub fn reload(session_name: &str) -> Result<()> {
+    let is_attached = is_attached_session(session_name)?;
+
+    let temp_session_name = format!("tsman-reload-temp-{}", std::process::id());
+    if is_attached {
+        new_session(&temp_session_name)?;
+        Command::new("tmux")
+            .arg("switch-client")
+            .args(["-t", &temp_session_name])
+            .output()
+            .context("Failed to switch")?;
+    }
+
+    close_session(session_name)?;
+    spawn(session_name)?;
+
+    if is_attached {
+        attach_to_session(session_name)?;
+        close_session(&temp_session_name)?;
+    }
+
     Ok(())
 }
 

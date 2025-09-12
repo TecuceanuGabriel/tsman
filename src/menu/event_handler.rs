@@ -58,6 +58,7 @@ fn handle_normal_mode_key(key: KeyEvent) -> MenuAction {
         (true, KeyCode::Char('s')) => MenuAction::Save,
         (true, KeyCode::Char('d')) => MenuAction::Delete,
         (true, KeyCode::Char('k')) => MenuAction::Kill,
+        (true, KeyCode::Char('r')) => MenuAction::Reload,
         (true, KeyCode::Char('c')) => MenuAction::Exit,
         (true, KeyCode::Char('t')) => MenuAction::TogglePreview,
         (true, KeyCode::Char('h')) => MenuAction::ToggleHelp,

@@ -105,13 +105,23 @@ pub fn restore_session(session: &Session) -> Result<()> {
     let script = NamedTempFile::new()?;
 
     write(script.path(), script_str)?;
-
     Command::new("sh")
         .arg(script.path())
         .status()
         .context("Failed to reconstruct session")?;
 
-    attach_to_session(&session.name)
+    Ok(())
+}
+
+pub fn new_session(session_name: &str) -> Result<()> {
+    Command::new("tmux")
+        .arg("new")
+        .arg("-d")
+        .args(["-s", session_name])
+        .output()
+        .context("Failed to spawn new session")?;
+
+    Ok(())
 }
 
 /// Checks if a tmux session is currently active.
@@ -136,6 +146,22 @@ pub fn is_active_session(session_name: &str) -> Result<bool> {
         output_str.split(TMUX_LINE_SEPARATOR).collect::<Vec<&str>>();
 
     Ok(session_names.contains(&session_name))
+}
+
+pub fn is_attached_session(session_name: &str) -> Result<bool> {
+    let output = Command::new("tmux")
+        .arg("list-session")
+        .args(["-F", "#{session_name} #{session_attached}"])
+        .output()
+        .context("Failed to get sessions")?;
+
+    let output_str = String::from_utf8(output.stdout)?;
+    let session_names =
+        output_str.split(TMUX_LINE_SEPARATOR).collect::<Vec<&str>>();
+
+    let target: &str = &(session_name.to_string() + " 1");
+
+    Ok(session_names.contains(&target))
 }
 
 /// Attaches to or switches to a tmux session.
