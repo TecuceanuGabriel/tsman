@@ -86,9 +86,8 @@ pub fn restore_session(session: &Session) -> Result<()> {
 
     for window in session.windows.iter().skip(1) {
         script_str += &format!(
-            "tmux new-window -d -t {} -n {} -c {}\n",
+            "tmux new-window -d -t {} -c {}\n",
             temp_session_name,
-            window.name,
             escape(Cow::from(&session.work_dir))
         );
 
@@ -455,6 +454,9 @@ fn get_window_config_cmd(
     let window_target = format!("{}:{}", temp_session_name, window.index);
 
     let mut cmd = String::new();
+
+    cmd +=
+        &format!("tmux rename-window -t {} {}\n", window_target, window.name);
 
     for _ in window.panes.iter().skip(1) {
         cmd += &format!(
