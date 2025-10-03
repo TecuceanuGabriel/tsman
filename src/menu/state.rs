@@ -6,12 +6,14 @@ use crate::menu::{item::MenuItem, items_state::ItemsState, ui_flags::UiFlags};
 #[derive(PartialEq)]
 pub enum MenuMode {
     Normal,
+    Rename,
     HelpPopup,
     ConfirmationPopup,
 }
 
 pub struct MenuState<'a> {
-    pub input: TextArea<'a>,
+    pub filter_input: TextArea<'a>,
+    pub rename_input: TextArea<'a>,
     pub items: ItemsState,
 
     pub mode: MenuMode,
@@ -26,11 +28,15 @@ impl<'a> MenuState<'a> {
         show_preview: bool,
         ask_for_confirmation: bool,
     ) -> Self {
-        let mut input = TextArea::default();
-        input.set_cursor_line_style(Style::default());
+        let mut filter_input = TextArea::default();
+        filter_input.set_cursor_line_style(Style::default());
+
+        let mut rename_input = TextArea::default();
+        rename_input.set_cursor_line_style(Style::default());
 
         Self {
-            input,
+            filter_input,
+            rename_input,
             items: ItemsState::new(items),
             mode: MenuMode::Normal,
             ui_flags: UiFlags::new(show_preview, ask_for_confirmation),
