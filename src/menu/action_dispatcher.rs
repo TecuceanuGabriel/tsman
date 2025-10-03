@@ -32,39 +32,32 @@ impl ActionDispatcher for DefaultActionDispacher {
         terminal: &mut DefaultTerminal,
     ) -> Result<()> {
         match action {
-            MenuAction::Open => handle_open(state),
-            MenuAction::Delete => handle_delete(state),
-            MenuAction::Edit => handle_edit(state, terminal),
-            MenuAction::Save => handle_save(state),
-            MenuAction::Kill => handle_kill(state),
+            MenuAction::Open => handle_open(state)?,
+            MenuAction::Delete => handle_delete(state)?,
+            MenuAction::Edit => handle_edit(state, terminal)?,
+            MenuAction::Rename => handle_rename(state)?,
+            MenuAction::Save => handle_save(state)?,
+            MenuAction::Kill => handle_kill(state)?,
             MenuAction::MoveSelection(delta) => {
-                state.items.move_selection(delta);
-                Ok(())
+                state.items.move_selection(delta)
             }
             MenuAction::RemoveLastWord => {
-                state.input.delete_word();
-                state
-                    .items
-                    .update_filter_and_reset(&state.input.lines().join("\n"));
-                Ok(())
+                state.handle_textarea_input(|t| {
+                    t.delete_word();
+                });
             }
             MenuAction::AppendToInput(c) => {
-                state.input.insert_char(c);
-                state
-                    .items
-                    .update_filter_and_reset(&state.input.lines().join("\n"));
-                Ok(())
+                state.handle_textarea_input(|t| {
+                    t.insert_char(c);
+                });
             }
             MenuAction::DeleteFromInput => {
-                state.input.delete_char();
-                state
-                    .items
-                    .update_filter_and_reset(&state.input.lines().join("\n"));
-                Ok(())
+                state.handle_textarea_input(|t| {
+                    t.delete_char();
+                });
             }
             MenuAction::TogglePreview => {
                 state.ui_flags.show_preview = !state.ui_flags.show_preview;
-                Ok(())
             }
             MenuAction::ToggleHelp => {
                 if state.mode == MenuMode::HelpPopup {
@@ -72,18 +65,17 @@ impl ActionDispatcher for DefaultActionDispacher {
                 } else if state.mode == MenuMode::Normal {
                     state.mode = MenuMode::HelpPopup;
                 }
-                Ok(())
             }
             MenuAction::HideConfirmation => {
                 state.mode = MenuMode::Normal;
-                Ok(())
             }
             MenuAction::Exit => {
                 state.should_exit = true;
-                Ok(())
             }
-            MenuAction::Nop => Ok(()),
-        }
+            MenuAction::Nop => {}
+        };
+
+        Ok(())
     }
 }
 
@@ -124,7 +116,9 @@ fn handle_delete(state: &mut MenuState) -> Result<()> {
         state.items.remove_item(idx, selection);
     }
 
-    state.items.update_filter(&state.input.lines().join("\n"));
+    state
+        .items
+        .update_filter(&state.filter_input.lines().join("\n"));
 
     Ok(())
 }
@@ -151,6 +145,21 @@ fn handle_edit(
     Ok(())
 }
 
+fn handle_rename(state: &mut MenuState) -> Result<()> {
+    state.mode = MenuMode::Rename;
+    state.filter_input.delete_line_by_head();
+
+    let placeholder;
+    if let Some((_, menu_item)) = state.items.get_selected_item() {
+        placeholder = menu_item.name;
+    } else {
+        placeholder = String::new();
+    }
+
+    state.filter_input.insert_str(placeholder);
+    Ok(())
+}
+
 fn handle_save(state: &mut MenuState) -> Result<()> {
     let Some((_, selection)) = state.items.get_selected_item() else {
         return Ok(());
@@ -159,7 +168,9 @@ fn handle_save(state: &mut MenuState) -> Result<()> {
     if !selection.saved {
         actions::save_target(&selection.name)?;
         state.items.update_item(&selection.name, Some(true), None);
-        state.items.update_filter(&state.input.lines().join("\n"));
+        state
+            .items
+            .update_filter(&state.filter_input.lines().join("\n"));
     }
 
     Ok(())
@@ -178,7 +189,9 @@ fn handle_kill(state: &mut MenuState) -> Result<()> {
             state.items.remove_item(idx, selection);
         }
 
-        state.items.update_filter(&state.input.lines().join("\n"));
+        state
+            .items
+            .update_filter(&state.filter_input.lines().join("\n"));
     }
 
     Ok(())

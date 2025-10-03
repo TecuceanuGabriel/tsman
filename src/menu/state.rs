@@ -43,4 +43,24 @@ impl<'a> MenuState<'a> {
             should_exit: false,
         }
     }
+
+    pub fn get_active_textarea(&mut self) -> &mut TextArea<'a> {
+        match self.mode {
+            MenuMode::Rename => &mut self.rename_input,
+            _ => &mut self.filter_input,
+        }
+    }
+
+    pub fn handle_textarea_input<F>(&mut self, operation: F)
+    where
+        F: FnOnce(&mut TextArea),
+    {
+        let textarea = self.get_active_textarea();
+        operation(textarea);
+
+        let text = textarea.lines().join("\n");
+        if self.mode == MenuMode::Normal {
+            self.items.update_filter_and_reset(&text);
+        }
+    }
 }

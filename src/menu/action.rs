@@ -3,6 +3,7 @@ pub enum MenuAction {
     Open,
     Delete,
     Edit,
+    Rename,
     Save,
     Kill,
     MoveSelection(i32),
