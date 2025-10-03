@@ -10,7 +10,7 @@ use crossterm::{
 };
 use ratatui::DefaultTerminal;
 
-use crate::menu::action::MenuAction;
+use crate::menu::{action::MenuAction, state::MenuMode};
 use crate::{actions, menu::state::MenuState, tmux};
 
 pub trait ActionDispatcher {
@@ -67,11 +67,15 @@ impl ActionDispatcher for DefaultActionDispacher {
                 Ok(())
             }
             MenuAction::ToggleHelp => {
-                state.ui_flags.show_help = !state.ui_flags.show_help;
+                if state.mode == MenuMode::HelpPopup {
+                    state.mode = MenuMode::Normal;
+                } else if state.mode == MenuMode::Normal {
+                    state.mode = MenuMode::HelpPopup;
+                }
                 Ok(())
             }
             MenuAction::HideConfirmation => {
-                state.ui_flags.show_confirmation_popup = false;
+                state.mode = MenuMode::Normal;
                 Ok(())
             }
             MenuAction::Exit => {
@@ -95,14 +99,12 @@ fn handle_open(state: &mut MenuState) -> Result<()> {
 }
 
 fn handle_delete(state: &mut MenuState) -> Result<()> {
-    if state.ui_flags.ask_for_confirmation
-        && !state.ui_flags.show_confirmation_popup
-    {
-        state.ui_flags.show_confirmation_popup = true;
+    if state.ui_flags.ask_for_confirmation && state.mode == MenuMode::Normal {
+        state.mode = MenuMode::ConfirmationPopup;
         return Ok(());
     }
 
-    state.ui_flags.show_confirmation_popup = false;
+    state.mode = MenuMode::Normal;
 
     let Some((idx, selection)) = state.items.get_selected_item() else {
         return Ok(());

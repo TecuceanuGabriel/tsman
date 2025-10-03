@@ -3,10 +3,20 @@ use tui_textarea::TextArea;
 
 use crate::menu::{item::MenuItem, items_state::ItemsState, ui_flags::UiFlags};
 
+#[derive(PartialEq)]
+pub enum MenuMode {
+    Normal,
+    HelpPopup,
+    ConfirmationPopup,
+}
+
 pub struct MenuState<'a> {
     pub input: TextArea<'a>,
     pub items: ItemsState,
+
+    pub mode: MenuMode,
     pub ui_flags: UiFlags,
+
     pub should_exit: bool,
 }
 
@@ -22,6 +32,7 @@ impl<'a> MenuState<'a> {
         Self {
             input,
             items: ItemsState::new(items),
+            mode: MenuMode::Normal,
             ui_flags: UiFlags::new(show_preview, ask_for_confirmation),
             should_exit: false,
         }

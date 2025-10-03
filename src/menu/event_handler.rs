@@ -18,15 +18,13 @@ impl EventHandler for DefaultEventHandler {
             return MenuAction::Nop;
         }
 
-        if state.ui_flags.show_confirmation_popup {
-            return handle_confirmation_popup_key(key);
+        match state.mode {
+            super::state::MenuMode::Normal => handle_normal_mode_key(key),
+            super::state::MenuMode::HelpPopup => handle_help_popup_key(key),
+            super::state::MenuMode::ConfirmationPopup => {
+                handle_confirmation_popup_key(key)
+            }
         }
-
-        if state.ui_flags.show_help {
-            return handle_help_popup_key(key);
-        }
-
-        handle_normal_mode_key(key)
     }
 }
 

@@ -9,7 +9,10 @@ use ratatui::{
 };
 
 use crate::{
-    menu::{items_state::ItemsState, state::MenuState},
+    menu::{
+        items_state::ItemsState,
+        state::{MenuMode, MenuState},
+    },
     persistence::load_session_from_config,
     tmux::session::Session,
 };
@@ -54,13 +57,11 @@ impl MenuRenderer for DefaultMenuRenderer {
             draw_preview_pane(frame, content_chunks[1], &state.items);
         }
 
-        if state.ui_flags.ask_for_confirmation
-            && state.ui_flags.show_confirmation_popup
-        {
+        if state.mode == MenuMode::ConfirmationPopup {
             draw_confirmation_popup(frame);
         }
 
-        if state.ui_flags.show_help {
+        if state.mode == MenuMode::HelpPopup {
             draw_help_popup(frame);
         }
     }
