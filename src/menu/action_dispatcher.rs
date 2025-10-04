@@ -147,7 +147,8 @@ fn handle_edit(
 
 fn handle_rename(state: &mut MenuState) -> Result<()> {
     state.mode = MenuMode::Rename;
-    state.filter_input.delete_line_by_head();
+
+    state.rename_input.delete_line_by_head();
 
     let placeholder;
     if let Some((_, menu_item)) = state.items.get_selected_item() {
@@ -155,8 +156,8 @@ fn handle_rename(state: &mut MenuState) -> Result<()> {
     } else {
         placeholder = String::new();
     }
+    state.rename_input.insert_str(placeholder);
 
-    state.filter_input.insert_str(placeholder);
     Ok(())
 }
 
