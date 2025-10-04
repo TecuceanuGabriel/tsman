@@ -34,7 +34,7 @@ fn handle_normal_mode_key(key: KeyEvent) -> MenuAction {
     match (key.modifiers.contains(KeyModifiers::CONTROL), key.code) {
         (true, KeyCode::Char('p')) => MenuAction::MoveSelection(-1),
         (true, KeyCode::Char('n')) => MenuAction::MoveSelection(1),
-        (true, KeyCode::Char('r')) => MenuAction::Rename,
+        (true, KeyCode::Char('r')) => MenuAction::EnterRenameMode,
         (true, KeyCode::Char('e')) => MenuAction::Edit,
         (true, KeyCode::Char('s')) => MenuAction::Save,
         (true, KeyCode::Char('d')) => MenuAction::Delete,
@@ -57,13 +57,14 @@ fn handle_normal_mode_key(key: KeyEvent) -> MenuAction {
 
 fn handle_rename_mode_key(key: KeyEvent) -> MenuAction {
     match (key.modifiers.contains(KeyModifiers::CONTROL), key.code) {
-        // (true, KeyCode::Char('c')) => MenuAction::Exit,
+        (true, KeyCode::Char('c')) => MenuAction::ExitRenameMode,
         (true, KeyCode::Char('w')) => MenuAction::RemoveLastWord,
 
         (false, KeyCode::Char(c)) => MenuAction::AppendToInput(c),
         (false, KeyCode::Backspace) => MenuAction::DeleteFromInput,
-        // (false, KeyCode::Enter) => MenuAction::Open,
-        (false, KeyCode::Esc) => MenuAction::Exit,
+        (false, KeyCode::Enter) => MenuAction::Rename,
+        (false, KeyCode::Esc) => MenuAction::ExitRenameMode,
+
         _ => MenuAction::Nop,
     }
 }

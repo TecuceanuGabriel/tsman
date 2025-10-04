@@ -3,8 +3,8 @@ pub enum MenuAction {
     Open,
     Delete,
     Edit,
-    Rename,
     Save,
+    Rename,
     Kill,
     MoveSelection(i32),
     AppendToInput(char),
@@ -13,6 +13,8 @@ pub enum MenuAction {
     TogglePreview,
     ToggleHelp,
     HideConfirmation,
+    EnterRenameMode,
+    ExitRenameMode,
     Exit,
     Nop,
 }

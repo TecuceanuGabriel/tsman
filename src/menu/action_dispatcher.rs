@@ -35,7 +35,7 @@ impl ActionDispatcher for DefaultActionDispacher {
             MenuAction::Open => handle_open(state)?,
             MenuAction::Delete => handle_delete(state)?,
             MenuAction::Edit => handle_edit(state, terminal)?,
-            MenuAction::Rename => handle_rename(state)?,
+            MenuAction::Rename => todo!(),
             MenuAction::Save => handle_save(state)?,
             MenuAction::Kill => handle_kill(state)?,
             MenuAction::MoveSelection(delta) => {
@@ -69,6 +69,8 @@ impl ActionDispatcher for DefaultActionDispacher {
             MenuAction::HideConfirmation => {
                 state.mode = MenuMode::Normal;
             }
+            MenuAction::EnterRenameMode => handle_enter_rename(state)?,
+            MenuAction::ExitRenameMode => state.mode = MenuMode::Normal,
             MenuAction::Exit => {
                 state.should_exit = true;
             }
@@ -145,7 +147,7 @@ fn handle_edit(
     Ok(())
 }
 
-fn handle_rename(state: &mut MenuState) -> Result<()> {
+fn handle_enter_rename(state: &mut MenuState) -> Result<()> {
     state.mode = MenuMode::Rename;
 
     state.rename_input.delete_line_by_head();
