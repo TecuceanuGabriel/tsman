@@ -35,8 +35,8 @@ impl ActionDispatcher for DefaultActionDispacher {
             MenuAction::Open => handle_open(state)?,
             MenuAction::Delete => handle_delete(state)?,
             MenuAction::Edit => handle_edit(state, terminal)?,
-            MenuAction::Rename => todo!(),
             MenuAction::Save => handle_save(state)?,
+            MenuAction::Rename => handle_rename(state)?,
             MenuAction::Kill => handle_kill(state)?,
             MenuAction::MoveSelection(delta) => {
                 state.items.move_selection(delta)
@@ -106,10 +106,14 @@ fn handle_delete(state: &mut MenuState) -> Result<()> {
 
     if selection.saved {
         actions::delete(&selection.name)?;
-        state.items.update_item(&selection.name, Some(false), None);
+        state
+            .items
+            .update_item(&selection.name, Some(false), None, None);
     } else {
         tmux::interface::close_session(&selection.name)?;
-        state.items.update_item(&selection.name, None, Some(false));
+        state
+            .items
+            .update_item(&selection.name, None, Some(false), None);
     }
 
     if (selection.saved && !selection.active)
@@ -147,22 +151,6 @@ fn handle_edit(
     Ok(())
 }
 
-fn handle_enter_rename(state: &mut MenuState) -> Result<()> {
-    state.mode = MenuMode::Rename;
-
-    state.rename_input.delete_line_by_head();
-
-    let placeholder;
-    if let Some((_, menu_item)) = state.items.get_selected_item() {
-        placeholder = menu_item.name;
-    } else {
-        placeholder = String::new();
-    }
-    state.rename_input.insert_str(placeholder);
-
-    Ok(())
-}
-
 fn handle_save(state: &mut MenuState) -> Result<()> {
     let Some((_, selection)) = state.items.get_selected_item() else {
         return Ok(());
@@ -170,10 +158,37 @@ fn handle_save(state: &mut MenuState) -> Result<()> {
 
     if !selection.saved {
         actions::save_target(&selection.name)?;
-        state.items.update_item(&selection.name, Some(true), None);
+        state
+            .items
+            .update_item(&selection.name, Some(true), None, None);
         state
             .items
             .update_filter(&state.filter_input.lines().join("\n"));
+    }
+
+    Ok(())
+}
+
+fn handle_rename(state: &mut MenuState) -> Result<()> {
+    let Some((_, selection)) = state.items.get_selected_item() else {
+        return Ok(());
+    };
+
+    state.mode = MenuMode::Normal;
+
+    // TODO: validate name and display popup?
+    let new_name = state.rename_input.lines().join("\n");
+
+    state
+        .items
+        .update_item(&selection.name, None, None, Some(&new_name));
+
+    if selection.active {
+        tmux::interface::rename_session(&selection.name, &new_name)?;
+    }
+
+    if selection.saved {
+        actions::rename(&selection.name, &new_name)?;
     }
 
     Ok(())
@@ -186,7 +201,9 @@ fn handle_kill(state: &mut MenuState) -> Result<()> {
 
     if selection.active {
         tmux::interface::close_session(&selection.name)?;
-        state.items.update_item(&selection.name, None, Some(false));
+        state
+            .items
+            .update_item(&selection.name, None, Some(false), None);
 
         if !selection.saved {
             state.items.remove_item(idx, selection);
@@ -196,6 +213,22 @@ fn handle_kill(state: &mut MenuState) -> Result<()> {
             .items
             .update_filter(&state.filter_input.lines().join("\n"));
     }
+
+    Ok(())
+}
+
+fn handle_enter_rename(state: &mut MenuState) -> Result<()> {
+    state.mode = MenuMode::Rename;
+
+    state.rename_input.delete_line_by_head();
+
+    let placeholder;
+    if let Some((_, menu_item)) = state.items.get_selected_item() {
+        placeholder = menu_item.name;
+    } else {
+        placeholder = String::new();
+    }
+    state.rename_input.insert_str(placeholder);
 
     Ok(())
 }

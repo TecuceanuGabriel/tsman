@@ -173,6 +173,30 @@ pub fn delete(session_name: &str) -> Result<()> {
     Ok(())
 }
 
+pub fn rename(session_name: &str, new_name: &str) -> Result<()> {
+    let path = get_config_file_path(session_name)?;
+    let mut new_path = path.clone();
+    new_path.set_file_name(new_name);
+    new_path.set_extension("yaml");
+    fs::rename(path, new_path)?;
+
+    let old_yaml = load_session_from_config(new_name)
+        .context("Failed to read session from config file")?;
+    let mut session: Session =
+        serde_yaml::from_str(&old_yaml).with_context(|| {
+            format!("Failed to deserialize session from yaml {old_yaml}")
+        })?;
+    session.name = new_name.to_owned();
+
+    let updated_yaml = serde_yaml::to_string(&session).with_context(|| {
+        format!("Failed to serialize session {session:#?} to yaml")
+    })?;
+    save_session_config(&session.name, updated_yaml)
+        .context("Failed to save yaml config to disk")?;
+
+    Ok(())
+}
+
 /// Launches an interactive menu for managing tmux sessions.
 ///
 /// The menu displays all saved and active sessions and allows the user to:
