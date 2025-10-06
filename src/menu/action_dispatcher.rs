@@ -10,8 +10,11 @@ use crossterm::{
 };
 use ratatui::DefaultTerminal;
 
-use crate::menu::{action::MenuAction, state::MenuMode};
 use crate::{actions, menu::state::MenuState, tmux};
+use crate::{
+    menu::{action::MenuAction, state::MenuMode},
+    util::validate_session_name,
+};
 
 pub trait ActionDispatcher {
     fn dispach(
@@ -176,8 +179,8 @@ fn handle_rename(state: &mut MenuState) -> Result<()> {
 
     state.mode = MenuMode::Normal;
 
-    // TODO: validate name and display popup?
-    let new_name = state.rename_input.lines().join("\n");
+    let new_name =
+        validate_session_name(&state.rename_input.lines().join("\n"))?;
 
     state
         .items
