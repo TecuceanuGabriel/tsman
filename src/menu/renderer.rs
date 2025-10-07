@@ -5,7 +5,7 @@ use ratatui::{
     layout::{Alignment, Constraint, Direction, Flex, Layout, Margin, Rect},
     style::{Color, Style},
     text::Line,
-    widgets::{Block, Borders, Clear, List, Paragraph},
+    widgets::{Block, Borders, Clear, List, Paragraph, Wrap},
 };
 
 use crate::{
@@ -297,7 +297,7 @@ fn draw_help_popup(f: &mut Frame) {
 }
 
 fn draw_error(f: &mut Frame, message: &str) {
-    let popup_area = create_centered_rect(f.area(), 10, 10);
+    let popup_area = create_centered_rect(f.area(), 30, 10);
 
     f.render_widget(Clear, popup_area);
 
@@ -306,7 +306,11 @@ fn draw_error(f: &mut Frame, message: &str) {
         .borders(Borders::ALL)
         .style(ERROR_POPUP_STYLE);
 
-    f.render_widget(Paragraph::new(message).block(block), popup_area);
+    let paragraph = Paragraph::new(message)
+        .block(block)
+        .wrap(Wrap { trim: false });
+
+    f.render_widget(paragraph.centered(), popup_area);
 }
 
 fn create_centered_rect(area: Rect, length_x: u16, length_y: u16) -> Rect {
