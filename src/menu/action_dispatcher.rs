@@ -74,6 +74,7 @@ impl ActionDispatcher for DefaultActionDispacher {
             }
             MenuAction::EnterRenameMode => handle_enter_rename(state)?,
             MenuAction::ExitRenameMode => state.mode = MenuMode::Normal,
+            MenuAction::CloseErrorPopup => state.mode = MenuMode::Normal,
             MenuAction::Exit => {
                 state.should_exit = true;
             }
@@ -179,8 +180,12 @@ fn handle_rename(state: &mut MenuState) -> Result<()> {
 
     state.mode = MenuMode::Normal;
 
-    let new_name =
-        validate_session_name(&state.rename_input.lines().join("\n"))?;
+    let new_name = state.rename_input.lines().join("\n");
+
+    if let Err(err) = validate_session_name(&new_name) {
+        state.mode = MenuMode::ErrorPopup(err.to_string());
+        return Ok(());
+    }
 
     state
         .items

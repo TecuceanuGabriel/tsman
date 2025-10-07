@@ -20,6 +20,7 @@ use crate::{
 const HIGHLIGHT_STYLE: Style = Style::new().bg(Color::Blue);
 const SUBTLE_STYLE: Style = Style::new().fg(Color::DarkGray);
 const POPUP_STYLE: Style = Style::new().fg(Color::Blue).bg(Color::Gray);
+const ERROR_POPUP_STYLE: Style = Style::new().fg(Color::Red).bg(Color::Gray);
 const PROMPT_STYLE: Style = Style::new().fg(Color::Green);
 const RENAME_PROMPT_STYLE: Style = Style::new().fg(Color::Red);
 
@@ -58,9 +59,10 @@ impl MenuRenderer for DefaultMenuRenderer {
             draw_preview_pane(frame, content_chunks[1], &state.items);
         }
 
-        match state.mode {
+        match &state.mode {
             MenuMode::ConfirmationPopup => draw_confirmation_popup(frame),
             MenuMode::HelpPopup => draw_help_popup(frame),
+            MenuMode::ErrorPopup(message) => draw_error(frame, &message),
             _ => {}
         }
     }
@@ -292,6 +294,19 @@ fn draw_help_popup(f: &mut Frame) {
         Paragraph::new(popup_text).block(popup_block),
         bottom_chunks[1],
     );
+}
+
+fn draw_error(f: &mut Frame, message: &str) {
+    let popup_area = create_centered_rect(f.area(), 10, 10);
+
+    f.render_widget(Clear, popup_area);
+
+    let block = Block::default()
+        .title("Error")
+        .borders(Borders::ALL)
+        .style(ERROR_POPUP_STYLE);
+
+    f.render_widget(Paragraph::new(message).block(block), popup_area);
 }
 
 fn create_centered_rect(area: Rect, length_x: u16, length_y: u16) -> Rect {

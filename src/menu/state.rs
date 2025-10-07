@@ -9,6 +9,7 @@ pub enum MenuMode {
     Rename,
     HelpPopup,
     ConfirmationPopup,
+    ErrorPopup(String),
 }
 
 pub struct MenuState<'a> {

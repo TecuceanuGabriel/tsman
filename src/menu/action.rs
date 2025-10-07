@@ -15,6 +15,7 @@ pub enum MenuAction {
     HideConfirmation,
     EnterRenameMode,
     ExitRenameMode,
+    CloseErrorPopup,
     Exit,
     Nop,
 }

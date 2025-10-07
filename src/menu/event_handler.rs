@@ -26,6 +26,7 @@ impl EventHandler for DefaultEventHandler {
             MenuMode::Rename => handle_rename_mode_key(key),
             MenuMode::HelpPopup => handle_help_popup_key(key),
             MenuMode::ConfirmationPopup => handle_confirmation_popup_key(key),
+            MenuMode::ErrorPopup(_) => handle_error_popup_key(key),
         }
     }
 }
@@ -86,5 +87,11 @@ fn handle_help_popup_key(key: KeyEvent) -> MenuAction {
             MenuAction::ToggleHelp
         }
         _ => MenuAction::Nop,
+    }
+}
+
+fn handle_error_popup_key(key: KeyEvent) -> MenuAction {
+    match key.code {
+        _ => MenuAction::CloseErrorPopup,
     }
 }
