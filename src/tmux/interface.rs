@@ -164,6 +164,17 @@ pub fn attach_to_session(session_name: &str) -> Result<()> {
     Ok(())
 }
 
+pub fn rename_session(session_name: &str, new_name: &str) -> Result<()> {
+    Command::new("tmux")
+        .arg("rename-session")
+        .args(["-t", session_name])
+        .arg(new_name)
+        .status()
+        .context("Failed to rename session")?;
+
+    Ok(())
+}
+
 /// Closes a tmux session by name.
 ///
 /// # Arguments

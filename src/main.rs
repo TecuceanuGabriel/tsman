@@ -8,6 +8,7 @@ mod menu;
 mod persistence;
 mod terminal_utils;
 mod tmux;
+mod util;
 
 use anyhow::{Context, Result};
 use clap::Parser;

@@ -5,11 +5,14 @@ use ratatui::{
     layout::{Alignment, Constraint, Direction, Flex, Layout, Margin, Rect},
     style::{Color, Style},
     text::Line,
-    widgets::{Block, Borders, Clear, List, Paragraph},
+    widgets::{Block, Borders, Clear, List, Paragraph, Wrap},
 };
 
 use crate::{
-    menu::{items_state::ItemsState, state::MenuState},
+    menu::{
+        items_state::ItemsState,
+        state::{MenuMode, MenuState},
+    },
     persistence::load_session_from_config,
     tmux::session::Session,
 };
@@ -17,7 +20,9 @@ use crate::{
 const HIGHLIGHT_STYLE: Style = Style::new().bg(Color::Blue);
 const SUBTLE_STYLE: Style = Style::new().fg(Color::DarkGray);
 const POPUP_STYLE: Style = Style::new().fg(Color::Blue).bg(Color::Gray);
+const ERROR_POPUP_STYLE: Style = Style::new().fg(Color::Red).bg(Color::Gray);
 const PROMPT_STYLE: Style = Style::new().fg(Color::Green);
+const RENAME_PROMPT_STYLE: Style = Style::new().fg(Color::Red);
 
 const PREVIEW_WIDTH_RATIO: u16 = 40;
 
@@ -54,14 +59,11 @@ impl MenuRenderer for DefaultMenuRenderer {
             draw_preview_pane(frame, content_chunks[1], &state.items);
         }
 
-        if state.ui_flags.ask_for_confirmation
-            && state.ui_flags.show_confirmation_popup
-        {
-            draw_confirmation_popup(frame);
-        }
-
-        if state.ui_flags.show_help {
-            draw_help_popup(frame);
+        match &state.mode {
+            MenuMode::ConfirmationPopup => draw_confirmation_popup(frame),
+            MenuMode::HelpPopup => draw_help_popup(frame),
+            MenuMode::ErrorPopup(message) => draw_error(frame, &message),
+            _ => {}
         }
     }
 }
@@ -120,7 +122,24 @@ fn render_results_list(
 }
 
 fn render_input_field(frame: &mut Frame, area: Rect, state: &mut MenuState) {
-    let input_block = Block::default().borders(Borders::ALL).title("Search");
+    let title;
+    let prompt_style;
+    let input;
+
+    if state.mode == MenuMode::Rename {
+        title = "Rename";
+        prompt_style = RENAME_PROMPT_STYLE;
+        input = &state.rename_input;
+    } else {
+        title = "Search";
+        prompt_style = PROMPT_STYLE;
+        input = &state.filter_input;
+    };
+
+    let input_block = Block::default()
+        .borders(Borders::ALL)
+        .border_style(prompt_style)
+        .title(title);
 
     frame.render_widget(input_block, area);
 
@@ -134,10 +153,10 @@ fn render_input_field(frame: &mut Frame, area: Rect, state: &mut MenuState) {
         .constraints([Constraint::Length(2), Constraint::Min(1)].as_ref())
         .split(input_area);
 
-    let prompt = Paragraph::new("> ").style(PROMPT_STYLE);
+    let prompt = Paragraph::new("> ").style(prompt_style);
     frame.render_widget(prompt, chunks[0]);
 
-    frame.render_widget(&state.input, chunks[1]);
+    frame.render_widget(input, chunks[1]);
 }
 
 fn render_help_hint(frame: &mut Frame, area: Rect) {
@@ -275,6 +294,23 @@ fn draw_help_popup(f: &mut Frame) {
         Paragraph::new(popup_text).block(popup_block),
         bottom_chunks[1],
     );
+}
+
+fn draw_error(f: &mut Frame, message: &str) {
+    let popup_area = create_centered_rect(f.area(), 30, 10);
+
+    f.render_widget(Clear, popup_area);
+
+    let block = Block::default()
+        .title("Error")
+        .borders(Borders::ALL)
+        .style(ERROR_POPUP_STYLE);
+
+    let paragraph = Paragraph::new(message)
+        .block(block)
+        .wrap(Wrap { trim: false });
+
+    f.render_widget(paragraph.centered(), popup_area);
 }
 
 fn create_centered_rect(area: Rect, length_x: u16, length_y: u16) -> Rect {

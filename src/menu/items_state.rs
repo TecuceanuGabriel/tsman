@@ -49,6 +49,7 @@ impl ItemsState {
         name: &str,
         saved: Option<bool>,
         active: Option<bool>,
+        new_name: Option<&str>,
     ) {
         if let Some(item) = self.items.iter_mut().find(|i| i.name == name) {
             if let Some(saved_val) = saved {
@@ -56,6 +57,9 @@ impl ItemsState {
             }
             if let Some(active_val) = active {
                 item.active = active_val;
+            }
+            if let Some(name) = new_name {
+                item.name = name.to_owned();
             }
         }
     }
