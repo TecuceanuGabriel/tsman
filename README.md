@@ -29,10 +29,10 @@ _Delete/Save_
 - Quickly save/restore/delete tmux sessions.
 - Manually tweak session config files for better control.
 - Manage sessions from the interactive TUI menu:
-  - Use the keybindings to trigger actions (Save/Open/Edit/Delete).
-  - Fuzzily find sessions (powered by
-    [fuzzy-matcher](https://github.com/skim-rs/fuzzy-matcher)).
-  - View the sessions structure in the preview panel.
+    - Use the keybindings to trigger actions (Save/Open/Edit/Delete).
+    - Fuzzily find sessions (powered by
+      [fuzzy-matcher](https://github.com/skim-rs/fuzzy-matcher)).
+    - View the sessions structure in the preview panel.
 
 ## ⚡Requirements
 
@@ -101,6 +101,7 @@ Session actions:
 | `C-d`   | Delete config file of selected session | Kill session           |
 | `C-s`   | -                                      | Save session           |
 | `C-k`   | Kill session                           | Kill session           |
+| `C-r`   | Rename session and update config file  | Rename session         |
 | `Enter` | Open session                           | Open session           |
 
 UI Controls:
