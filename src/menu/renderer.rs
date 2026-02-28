@@ -13,7 +13,7 @@ use crate::{
         items_state::ItemsState,
         state::{MenuMode, MenuState},
     },
-    persistence::load_session_from_config,
+    persistence::{StorageKind, load_config},
     tmux::session::Session,
 };
 
@@ -181,7 +181,7 @@ fn generate_preview_content(items: &ItemsState) -> String {
         return String::new();
     };
 
-    load_session_from_config(&selection.name)
+    load_config(StorageKind::Session, &selection.name)
         .ok()
         .and_then(|session_str| {
             serde_yaml::from_str::<Session>(&session_str).ok()

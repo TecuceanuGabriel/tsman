@@ -71,7 +71,7 @@ fn save(session_name: Option<&str>) -> Result<()> {
         format!("Failed to serialize session {current_session:#?} to yaml")
     })?;
 
-    save_session_config(&current_session.name, yaml)
+    save_config(StorageKind::Session, &current_session.name, yaml)
         .context("Failed to save yaml config to disk")?;
 
     Ok(())
@@ -94,7 +94,7 @@ pub fn save_target(session_name: &str) -> Result<()> {
         format!("Failed to serialize session {current_session:#?} to yaml")
     })?;
 
-    save_session_config(&current_session.name, yaml)
+    save_config(StorageKind::Session, &current_session.name, yaml)
         .context("Failed to save yaml config to disk")?;
 
     Ok(())
@@ -119,7 +119,7 @@ pub fn open(session_name: &str) -> Result<()> {
         return Ok(());
     }
 
-    let yaml = load_session_from_config(session_name)
+    let yaml = load_config(StorageKind::Session, session_name)
         .context("Failed to read session from config file")?;
 
     let session: Session = serde_yaml::from_str(&yaml).with_context(|| {
@@ -144,10 +144,10 @@ pub fn open(session_name: &str) -> Result<()> {
 /// - The editor command fails.
 pub fn edit(session_name: Option<&str>) -> Result<()> {
     let path = if let Some(name) = session_name {
-        get_config_file_path(name)?
+        get_config_file_path(StorageKind::Session, name)?
     } else {
         let name = get_session_name()?;
-        get_config_file_path(&name)?
+        get_config_file_path(StorageKind::Session, &name)?
     };
 
     let path_str = escape(path.as_os_str().to_string_lossy());
@@ -168,19 +168,19 @@ pub fn edit(session_name: Option<&str>) -> Result<()> {
 /// # Errors
 /// Returns an error if the file cannot be removed.
 pub fn delete(session_name: &str) -> Result<()> {
-    let path = get_config_file_path(session_name)?;
+    let path = get_config_file_path(StorageKind::Session, session_name)?;
     fs::remove_file(path)?;
     Ok(())
 }
 
 pub fn rename(session_name: &str, new_name: &str) -> Result<()> {
-    let path = get_config_file_path(session_name)?;
+    let path = get_config_file_path(StorageKind::Session, session_name)?;
     let mut new_path = path.clone();
     new_path.set_file_name(new_name);
     new_path.set_extension("yaml");
     fs::rename(path, new_path)?;
 
-    let old_yaml = load_session_from_config(new_name)
+    let old_yaml = load_config(StorageKind::Session, new_name)
         .context("Failed to read session from config file")?;
     let mut session: Session =
         serde_yaml::from_str(&old_yaml).with_context(|| {
@@ -191,7 +191,7 @@ pub fn rename(session_name: &str, new_name: &str) -> Result<()> {
     let updated_yaml = serde_yaml::to_string(&session).with_context(|| {
         format!("Failed to serialize session {session:#?} to yaml")
     })?;
-    save_session_config(&session.name, updated_yaml)
+    save_config(StorageKind::Session, &session.name, updated_yaml)
         .context("Failed to save yaml config to disk")?;
 
     Ok(())
@@ -245,7 +245,7 @@ fn menu(show_preview: bool, ask_for_confirmation: bool) -> Result<()> {
 /// Returns an error if listing sessions fails.
 fn get_all_sessions() -> Result<Vec<MenuItem>> {
     let saved_sessions: HashSet<String> =
-        list_saved_sessions()?.into_iter().collect();
+        list_saved_configs(StorageKind::Session)?.into_iter().collect();
 
     let active_sessions: HashSet<String> =
         list_active_sessions()?.into_iter().collect();
