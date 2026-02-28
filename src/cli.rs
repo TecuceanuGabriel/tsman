@@ -100,4 +100,82 @@ currently active sessions.",
         )]
         ask_for_confirmation: bool,
     },
+
+    #[command(
+        about = "Manage layout templates",
+        long_about = "Manage layout templates. Layouts capture window/pane structure
+without working directories, allowing reuse across projects.",
+        alias = "l"
+    )]
+    Layout {
+        #[command(subcommand)]
+        command: LayoutCommands,
+    },
+}
+
+/// Subcommands for managing layout templates.
+#[derive(Debug, Subcommand)]
+pub enum LayoutCommands {
+    #[command(
+        about = "Save current session as a layout",
+        long_about = "Capture the current tmux session's window/pane structure as a
+reusable layout template. Stores the <layout_name>.yaml config file in
+$TSMAN_LAYOUT_STORAGE_DIR if set, or ~/.config/.tlayouts.",
+        alias = "s"
+    )]
+    Save {
+        /// Name of the layout (default: name of current session)
+        #[arg(value_parser = validate_session_name)]
+        layout_name: Option<String>,
+    },
+
+    #[command(
+        about = "Create a new session from a layout",
+        long_about = "Create a new tmux session using a saved layout template.
+All panes will start in the specified working directory.",
+        arg_required_else_help = true,
+        alias = "c"
+    )]
+    Create {
+        /// Name of the layout to use
+        #[arg(value_parser = validate_session_name)]
+        layout_name: String,
+
+        /// Working directory for the new session
+        work_dir: String,
+
+        /// Name for the new session (default: layout name)
+        #[arg(value_parser = validate_session_name)]
+        session_name: Option<String>,
+    },
+
+    #[command(
+        about = "List all saved layouts",
+        alias = "ls"
+    )]
+    List,
+
+    #[command(
+        about = "Delete a saved layout",
+        arg_required_else_help = true,
+        alias = "d"
+    )]
+    Delete {
+        /// Name of the layout
+        #[arg(value_parser = validate_session_name)]
+        layout_name: String,
+    },
+
+    #[command(
+        about = "Edit a layout config file",
+        long_about = "Open the config file of the specified layout in $EDITOR
+for manual editing.",
+        arg_required_else_help = true,
+        alias = "e"
+    )]
+    Edit {
+        /// Name of the layout
+        #[arg(value_parser = validate_session_name)]
+        layout_name: String,
+    },
 }

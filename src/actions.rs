@@ -6,7 +6,7 @@ use std::collections::HashSet;
 use std::fs;
 use std::process::Command;
 
-use crate::cli::{Args, Commands};
+use crate::cli::{Args, Commands, LayoutCommands};
 use crate::menu::Menu;
 use crate::menu::action_dispatcher::DefaultActionDispacher;
 use crate::menu::event_handler::DefaultEventHandler;
@@ -44,6 +44,7 @@ pub fn handle(args: Args) -> Result<()> {
             preview,
             ask_for_confirmation,
         } => menu(preview, ask_for_confirmation),
+        Commands::Layout { command } => handle_layout(command),
     }
 }
 
@@ -265,4 +266,14 @@ fn get_all_sessions() -> Result<Vec<MenuItem>> {
         .collect();
 
     Ok(all_sessions)
+}
+
+fn handle_layout(command: LayoutCommands) -> Result<()> {
+    match command {
+        LayoutCommands::Save { .. } => todo!("layout save"),
+        LayoutCommands::Create { .. } => todo!("layout create"),
+        LayoutCommands::List => todo!("layout list"),
+        LayoutCommands::Delete { .. } => todo!("layout delete"),
+        LayoutCommands::Edit { .. } => todo!("layout edit"),
+    }
 }
