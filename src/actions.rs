@@ -15,7 +15,8 @@ use crate::menu::renderer::DefaultMenuRenderer;
 use crate::persistence::*;
 use crate::terminal_utils;
 use crate::tmux::interface::*;
-use crate::tmux::session::Session;
+use crate::tmux::layout::Layout;
+use crate::tmux::session::{Pane, Session, Window};
 
 use anyhow::{Context, Result};
 use shell_escape::escape;
@@ -270,10 +271,127 @@ fn get_all_sessions() -> Result<Vec<MenuItem>> {
 
 fn handle_layout(command: LayoutCommands) -> Result<()> {
     match command {
-        LayoutCommands::Save { .. } => todo!("layout save"),
-        LayoutCommands::Create { .. } => todo!("layout create"),
-        LayoutCommands::List => todo!("layout list"),
-        LayoutCommands::Delete { .. } => todo!("layout delete"),
-        LayoutCommands::Edit { .. } => todo!("layout edit"),
+        LayoutCommands::Save { layout_name } => {
+            layout_save(layout_name.as_deref())
+        }
+        LayoutCommands::Create {
+            layout_name,
+            work_dir,
+            session_name,
+        } => layout_create(&layout_name, &work_dir, session_name.as_deref()),
+        LayoutCommands::List => layout_list(),
+        LayoutCommands::Delete { layout_name } => layout_delete(&layout_name),
+        LayoutCommands::Edit { layout_name } => layout_edit(&layout_name),
     }
+}
+
+/// Saves the current tmux session as a layout template.
+///
+/// Captures the window/pane structure without working directories.
+fn layout_save(layout_name: Option<&str>) -> Result<()> {
+    let current_session =
+        get_session(None).context("Failed to get current session")?;
+
+    let mut layout = Layout::from(&current_session);
+
+    if let Some(name) = layout_name {
+        layout.name = name.to_string();
+    }
+
+    let yaml = serde_yaml::to_string(&layout).with_context(|| {
+        format!("Failed to serialize layout {layout:#?} to yaml")
+    })?;
+
+    save_config(StorageKind::Layout, &layout.name, yaml)
+        .context("Failed to save layout config to disk")?;
+
+    Ok(())
+}
+
+/// Creates a new tmux session from a saved layout template.
+///
+/// All panes start in the specified working directory.
+fn layout_create(
+    layout_name: &str,
+    work_dir: &str,
+    session_name: Option<&str>,
+) -> Result<()> {
+    let work_dir = std::fs::canonicalize(work_dir)
+        .with_context(|| format!("Invalid working directory: {work_dir}"))?
+        .to_string_lossy()
+        .to_string();
+
+    let yaml = load_config(StorageKind::Layout, layout_name)
+        .context("Failed to read layout from config file")?;
+
+    let layout: Layout = serde_yaml::from_str(&yaml).with_context(|| {
+        format!("Failed to deserialize layout from yaml {yaml}")
+    })?;
+
+    let name = session_name.unwrap_or(layout_name).to_string();
+
+    if is_active_session(&name)? {
+        anyhow::bail!("Session '{name}' already exists");
+    }
+
+    let session = Session {
+        name,
+        work_dir: work_dir.clone(),
+        windows: layout
+            .windows
+            .iter()
+            .map(|lw| Window {
+                index: lw.index.clone(),
+                name: lw.name.clone(),
+                layout: lw.layout.clone(),
+                panes: lw
+                    .panes
+                    .iter()
+                    .map(|lp| Pane {
+                        index: lp.index.clone(),
+                        current_command: lp.current_command.clone(),
+                        work_dir: work_dir.clone(),
+                    })
+                    .collect(),
+            })
+            .collect(),
+    };
+
+    restore_session(&session).context("Failed to create session from layout")?;
+
+    Ok(())
+}
+
+/// Lists all saved layout templates.
+fn layout_list() -> Result<()> {
+    let layouts = list_saved_configs(StorageKind::Layout)?;
+    if layouts.is_empty() {
+        println!("No saved layouts.");
+    } else {
+        for name in layouts {
+            println!("{name}");
+        }
+    }
+    Ok(())
+}
+
+/// Deletes a saved layout configuration file.
+fn layout_delete(layout_name: &str) -> Result<()> {
+    let path = get_config_file_path(StorageKind::Layout, layout_name)?;
+    fs::remove_file(path)?;
+    Ok(())
+}
+
+/// Opens a layout configuration file in `$EDITOR`.
+fn layout_edit(layout_name: &str) -> Result<()> {
+    let path = get_config_file_path(StorageKind::Layout, layout_name)?;
+
+    let path_str = escape(path.as_os_str().to_string_lossy());
+
+    Command::new("sh")
+        .arg("-c")
+        .arg(format!("$EDITOR {path_str}"))
+        .status()?;
+
+    Ok(())
 }
