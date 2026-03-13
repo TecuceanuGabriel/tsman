@@ -48,7 +48,11 @@ impl StorageKind {
 /// # Errors
 /// Returns an error if the storage directory cannot be determined or created,
 /// or the file cannot be written.
-pub fn save_config(kind: StorageKind, file_name: &str, data: String) -> Result<()> {
+pub fn save_config(
+    kind: StorageKind,
+    file_name: &str,
+    data: String,
+) -> Result<()> {
     let path = get_config_file_path(kind, file_name)?;
     fs::write(&path, data)?;
     Ok(())
@@ -123,7 +127,10 @@ pub fn list_saved_configs(kind: StorageKind) -> Result<Vec<String>> {
 ///
 /// # Errors
 /// Returns an error if the storage directory cannot be determined or created.
-pub fn get_config_file_path(kind: StorageKind, file_name: &str) -> Result<PathBuf> {
+pub fn get_config_file_path(
+    kind: StorageKind,
+    file_name: &str,
+) -> Result<PathBuf> {
     let mut path = get_and_ensure_storage_dir(kind)?;
     path.push(format!("{file_name}.yaml"));
     Ok(path)

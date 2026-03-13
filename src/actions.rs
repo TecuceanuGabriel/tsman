@@ -247,7 +247,9 @@ fn menu(show_preview: bool, ask_for_confirmation: bool) -> Result<()> {
 /// Returns an error if listing sessions fails.
 fn get_all_sessions() -> Result<Vec<MenuItem>> {
     let saved_sessions: HashSet<String> =
-        list_saved_configs(StorageKind::Session)?.into_iter().collect();
+        list_saved_configs(StorageKind::Session)?
+            .into_iter()
+            .collect();
 
     let active_sessions: HashSet<String> =
         list_active_sessions()?.into_iter().collect();
@@ -357,7 +359,8 @@ fn layout_create(
             .collect(),
     };
 
-    restore_session(&session).context("Failed to create session from layout")?;
+    restore_session(&session)
+        .context("Failed to create session from layout")?;
 
     Ok(())
 }

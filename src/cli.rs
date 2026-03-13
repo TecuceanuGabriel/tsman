@@ -149,10 +149,7 @@ All panes will start in the specified working directory.",
         session_name: Option<String>,
     },
 
-    #[command(
-        about = "List all saved layouts",
-        alias = "ls"
-    )]
+    #[command(about = "List all saved layouts", alias = "ls")]
     List,
 
     #[command(
