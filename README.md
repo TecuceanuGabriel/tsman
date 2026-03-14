@@ -2,134 +2,204 @@
 
 # tsman
 
-A lightweight session manager for tmux
-
 [![CI](https://img.shields.io/github/actions/workflow/status/TecuceanuGabriel/tsman/build.yml?label=CI)](https://github.com/TecuceanuGabriel/tsman/actions)
 [![Crates.io](https://img.shields.io/crates/v/tsman?logo=rust)](https://crates.io/crates/tsman)
 [![Downloads](https://img.shields.io/crates/d/tsman?color=blue)](https://crates.io/crates/tsman)
 [![Tmux](https://img.shields.io/badge/tmux-%3E%3Dv3.2-1BB91F?logo=tmux)](https://github.com/tmux/tmux)
 [![License](https://img.shields.io/badge/License-MIT-orange)](LICENSE)
 
-[Features](#features) • [Installation](#installation) • [Usage](#usage) •
-[Configuration](#configuration)
+a feature-rich session manager for tmux
 
-![Navigation](./assets/Navigation.gif)
-_Navigation_
+[Features](#features) • [Requirements](#requirements) • [Installation](#installation) • [Usage](#usage) •
+[Menu keybindings](#menu-keybindings) • [Configuration](#configuration) • [Notes](#notes)
 
-![Edit](./assets/Edit.gif)
-_Edit_
-
-![DeleteSave](./assets/DeleteSave.gif)
-_Delete/Save_
+![demo](./assets/demo.gif)
 
 </div>
 
-## ✨Features
+## Features
 
-- Quickly save/restore/delete tmux sessions.
-- Manually tweak session config files for better control.
-- Manage sessions from the interactive TUI menu:
-    - Use the keybindings to trigger actions (Save/Open/Edit/Delete).
-    - Fuzzily find sessions (powered by
+- Quickly save/restore/delete/edit/reload tmux sessions.
+- Work with layouts - reusable window/pane structure templates that can be applied to any working directory.
+- Manage sessions and layouts from the interactive TUI menu:
+    - Use keybindings to trigger actions (Save/Open/Edit/Delete/Rename/Kill/Reload).
+    - Toggle between sessions and layouts list views.
+    - Create new sessions from layout templates directly in the menu.
+    - Fuzzy-find sessions and layouts (powered by
       [fuzzy-matcher](https://github.com/skim-rs/fuzzy-matcher)).
-    - View the sessions structure in the preview panel.
+    - View session/layout structure in the preview panel.
+- Shell completions for bash, zsh, and fish.
 
-## ⚡Requirements
+## Requirements
 
 - tmux >= [v3.2](https://github.com/tmux/tmux/releases/tag/3.5a)
   (recommended for the display-popup feature).
 
-## 📦Installation
+## Installation
 
 ```bash
 cargo install tsman
 ```
 
-## 🚀Usage
+## Usage
 
-### Save current session
+Each subcommand has a short alias shown in parentheses.
+
+### Sessions
+
+#### Save current session (`s`)
 
 ```bash
-tsman save <session_name> # uses the specified name
-tsman save # uses the current name of the session
+tsman save <session_name> # save with the specified name
+tsman save                # save with the current session name
 ```
 
-### Open a session
+#### Open a session (`o`)
 
 ```bash
 tsman open <session_name>
 ```
 
-### Edit a session config file
+#### Edit a session config file (`e`)
 
-The file is opened for editing in `$EDITOR`.
+Opens the config file in `$EDITOR`.
 
 ```bash
-tsman edit <session_name> # edit the config file of the specified session
-tsman edit # edit the config file of the current session
+tsman edit <session_name> # edit the specified session
+tsman edit                # edit the current session
 ```
 
-### Delete a session config file
+#### Reload a session (`r`)
+
+Kill the running session and recreate it from its saved config. The session must be both active and saved.
+
+```bash
+tsman reload <session_name>
+tsman reload # reload the current session
+```
+
+#### Delete a session config file (`d`)
 
 ```bash
 tsman delete <session_name>
 ```
 
-### Open a menu that contains all saved sessions
+### Layouts
+
+Layouts capture a session's window/pane structure without working directories, so you can reuse the same arrangement across different projects.
+
+#### Save current session as a layout (`layout s`)
+
+```bash
+tsman layout save <layout_name> # save with the specified name
+tsman layout save               # save with the current session name
+```
+
+#### Create a session from a layout (`layout c`)
+
+All panes in the new session start in the given working directory.
+
+```bash
+tsman layout create <layout_name> <work_dir>               # session name defaults to layout name
+tsman layout create <layout_name> <work_dir> <session_name> # use a custom session name
+```
+
+#### List saved layouts (`layout ls`)
+
+```bash
+tsman layout list
+```
+
+#### Edit a layout config file (`layout e`)
+
+```bash
+tsman layout edit <layout_name>
+```
+
+#### Delete a layout (`layout d`)
+
+```bash
+tsman layout delete <layout_name>
+```
+
+### Menu (`m`)
+
+Open the interactive TUI menu.
 
 ```bash
 tsman menu
-tsman menu --preview # open the menu with the preview pane on
-tsman menu --ask-for-confirmation # Open a confirmation popup when deleting
+tsman menu --preview              # start with the preview pane on
+tsman menu --ask-for-confirmation # prompt before deleting
+tsman menu -p -a                  # shorthand for both flags
 ```
 
-## ⌨️Menu keybindings:
+### Shell completions (`c`)
+
+```bash
+tsman completions bash > ~/.local/share/bash-completion/completions/tsman
+tsman completions zsh > ~/.zfunc/_tsman
+tsman completions fish > ~/.config/fish/completions/tsman.fish
+```
+
+## Menu keybindings
 
 Navigation:
 
-| command              | action               |
-| -------------------- | -------------------- |
-| `Esc` / `C-c`        | Exit menu            |
-| `Up arrow` / `C-p`   | Select previous item |
-| `Down arrow` / `C-n` | Select next item     |
+| Keybinding     | Action               |
+| -------------- | -------------------- |
+| `Esc` / `C-c`  | Exit menu            |
+| `Up` / `C-p`   | Select previous item |
+| `Down` / `C-n` | Select next item     |
 
 Session actions:
 
-| command | saved session action                   | unsaved session action |
-| ------- | -------------------------------------- | ---------------------- |
-| `C-e`   | Edit config file of selected session   | -                      |
-| `C-d`   | Delete config file of selected session | Kill session           |
-| `C-s`   | -                                      | Save session           |
-| `C-k`   | Kill session                           | Kill session           |
-| `C-r`   | Rename session and update config file  | Rename session         |
-| `Enter` | Open session                           | Open session           |
+| Keybinding | Saved session                         | Unsaved session |
+| ---------- | ------------------------------------- | --------------- |
+| `Enter`    | Open session                          | Open session    |
+| `C-s`      | -                                     | Save session    |
+| `C-e`      | Edit config file                      | -               |
+| `C-d`      | Delete config file                    | Kill session    |
+| `C-k`      | Kill session                          | Kill session    |
+| `C-r`      | Rename session and update config file | Rename session  |
+| `C-o`      | Reload session from saved config      | -               |
 
-UI Controls:
+Layout actions (when in layouts view):
 
-| command | action                                    |
-| ------- | ----------------------------------------- |
-| `C-t`   | Toggle the visibility of the preview pane |
-| `C-h`   | Toggle the visibility of the help popup   |
-| `C-w`   | Delete last word from input               |
+| Keybinding | Action                           |
+| ---------- | -------------------------------- |
+| `Enter`    | Create a new session from layout |
+| `C-e`      | Edit layout config file          |
+| `C-d`      | Delete layout                    |
+| `C-r`      | Rename layout                    |
 
-Confirmation Popup:
+UI controls:
 
-| command                 | action  |
+| Keybinding   | Action                      |
+| ------------ | --------------------------- |
+| `C-l`        | Toggle sessions/layouts     |
+| `C-t`        | Toggle preview pane         |
+| `C-h`        | Toggle help popup           |
+| `C-w`        | Delete last word from input |
+| `C-u`        | Delete to line start        |
+| `Shift-Up`   | Scroll preview up           |
+| `Shift-Down` | Scroll preview down         |
+
+Confirmation popup:
+
+| Keybinding              | Action  |
 | ----------------------- | ------- |
 | `y` / `Y` / `Enter`     | Confirm |
 | `n` / `N` / `Esc` / `q` | Abort   |
 
-Help Popup:
+Help popup:
 
-| command                               | action |
+| Keybinding                            | Action |
 | ------------------------------------- | ------ |
 | `C-h` / `C-c` / `Esc` / `q` / `Enter` | Close  |
 
-## 🔧Configuration
+## Configuration
 
-You can add keybindings/aliases to your tmux/shell config file for faster usage.
-
-Example config:
+You can add keybindings/aliases to your tmux/shell config for faster usage.
 
 `~/.tmux.conf`:
 
@@ -146,24 +216,17 @@ bind -r C-s run-shell "tsman save"
 alias mux-fd="tsman menu -p -a"
 ```
 
-If you want to set up a custom location to store session config files set the
-`TSMAN_CONFIG_STORAGE_DIR` env variable. You can add the following line to
-your shell config file to make it persistent:
-
-```bash
-export TSMAN_CONFIG_STORAGE_DIR="$HOME/mux-sessions"
-```
-
-## 🗒️Notes
+## Notes
 
 - `$EDITOR` must be set to use the edit command.
-- the session config files are saved by defult in `~/.config/.tsessions/`.
+- Session names must be 1-30 characters, alphanumeric plus `-` and `_`.
+- Config files are stored as YAML - you can edit them manually for fine-grained control.
 
-## 🤝Contributing
+## Contributing
 
 - Please see [CONTRIBUTING.md](./.github/CONTRIBUTING.md)
 
-## 🙏Acknowledgements
+## Acknowledgements
 
 - [tmuxinator](https://github.com/tmuxinator/tmuxinator)
 - [ThePrimeagen's tmux-sessionizer](https://github.com/ThePrimeagen/tmux-sessionizer)
