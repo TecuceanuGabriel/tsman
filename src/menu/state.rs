@@ -4,12 +4,20 @@ use tui_textarea::TextArea;
 use crate::menu::{item::MenuItem, items_state::ItemsState, ui_flags::UiFlags};
 
 #[derive(PartialEq)]
+pub enum ListMode {
+    Sessions,
+    Layouts,
+}
+
+#[derive(PartialEq)]
 pub enum MenuMode {
     Normal,
     Rename,
     HelpPopup,
     ConfirmationPopup,
     ErrorPopup(String),
+    CreateFromLayoutName,
+    CreateFromLayoutWorkdir,
 }
 
 pub struct MenuState<'a> {
@@ -18,6 +26,8 @@ pub struct MenuState<'a> {
     pub items: ItemsState,
 
     pub mode: MenuMode,
+    pub list_mode: ListMode,
+    pub pending_create_name: String,
     pub ui_flags: UiFlags,
 
     pub should_exit: bool,
@@ -40,6 +50,8 @@ impl<'a> MenuState<'a> {
             rename_input,
             items: ItemsState::new(items),
             mode: MenuMode::Normal,
+            list_mode: ListMode::Sessions,
+            pending_create_name: String::new(),
             ui_flags: UiFlags::new(show_preview, ask_for_confirmation),
             should_exit: false,
         }
@@ -47,7 +59,9 @@ impl<'a> MenuState<'a> {
 
     pub fn get_active_textarea(&mut self) -> &mut TextArea<'a> {
         match self.mode {
-            MenuMode::Rename => &mut self.rename_input,
+            MenuMode::Rename
+            | MenuMode::CreateFromLayoutName
+            | MenuMode::CreateFromLayoutWorkdir => &mut self.rename_input,
             _ => &mut self.filter_input,
         }
     }

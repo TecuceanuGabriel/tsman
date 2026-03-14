@@ -81,6 +81,13 @@ impl ItemsState {
         self.list_state.select(Some(idx.saturating_sub(1)));
     }
 
+    pub fn replace_items(&mut self, mut items: Vec<MenuItem>) {
+        sort_items(&mut items);
+        self.items = items;
+        self.filtered_items_idx = (0..self.items.len()).collect();
+        self.reset_position();
+    }
+
     pub fn update_filter_and_reset(&mut self, input: &str) {
         self.update_filter(input);
         self.reset_position();

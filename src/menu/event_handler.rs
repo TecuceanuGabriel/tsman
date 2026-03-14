@@ -27,6 +27,10 @@ impl EventHandler for DefaultEventHandler {
             MenuMode::HelpPopup => handle_help_popup_key(key),
             MenuMode::ConfirmationPopup => handle_confirmation_popup_key(key),
             MenuMode::ErrorPopup(_) => handle_error_popup_key(key),
+            MenuMode::CreateFromLayoutName => handle_create_name_mode_key(key),
+            MenuMode::CreateFromLayoutWorkdir => {
+                handle_create_workdir_mode_key(key)
+            }
         }
     }
 }
@@ -41,6 +45,7 @@ fn handle_normal_mode_key(key: KeyEvent) -> MenuAction {
         (true, KeyCode::Char('d')) => MenuAction::Delete,
         (true, KeyCode::Char('k')) => MenuAction::Kill,
         (true, KeyCode::Char('c')) => MenuAction::Exit,
+        (true, KeyCode::Char('l')) => MenuAction::ToggleListMode,
         (true, KeyCode::Char('t')) => MenuAction::TogglePreview,
         (true, KeyCode::Char('h')) => MenuAction::ToggleHelp,
         (true, KeyCode::Char('w')) => MenuAction::RemoveLastWord,
@@ -93,5 +98,33 @@ fn handle_help_popup_key(key: KeyEvent) -> MenuAction {
 fn handle_error_popup_key(key: KeyEvent) -> MenuAction {
     match key.code {
         _ => MenuAction::CloseErrorPopup,
+    }
+}
+
+fn handle_create_name_mode_key(key: KeyEvent) -> MenuAction {
+    match (key.modifiers.contains(KeyModifiers::CONTROL), key.code) {
+        (true, KeyCode::Char('c')) => MenuAction::ExitCreateMode,
+        (true, KeyCode::Char('w')) => MenuAction::RemoveLastWord,
+
+        (false, KeyCode::Char(c)) => MenuAction::AppendToInput(c),
+        (false, KeyCode::Backspace) => MenuAction::DeleteFromInput,
+        (false, KeyCode::Enter) => MenuAction::ConfirmCreateName,
+        (false, KeyCode::Esc) => MenuAction::ExitCreateMode,
+
+        _ => MenuAction::Nop,
+    }
+}
+
+fn handle_create_workdir_mode_key(key: KeyEvent) -> MenuAction {
+    match (key.modifiers.contains(KeyModifiers::CONTROL), key.code) {
+        (true, KeyCode::Char('c')) => MenuAction::ExitCreateMode,
+        (true, KeyCode::Char('w')) => MenuAction::RemoveLastWord,
+
+        (false, KeyCode::Char(c)) => MenuAction::AppendToInput(c),
+        (false, KeyCode::Backspace) => MenuAction::DeleteFromInput,
+        (false, KeyCode::Enter) => MenuAction::CreateFromLayout,
+        (false, KeyCode::Esc) => MenuAction::ExitCreateMode,
+
+        _ => MenuAction::Nop,
     }
 }

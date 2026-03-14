@@ -11,10 +11,10 @@ use ratatui::{
 use crate::{
     menu::{
         items_state::ItemsState,
-        state::{MenuMode, MenuState},
+        state::{ListMode, MenuMode, MenuState},
     },
-    persistence::load_session_from_config,
-    tmux::session::Session,
+    persistence::{StorageKind, load_config},
+    tmux::{layout::Layout as TmuxLayout, session::Session},
 };
 
 const HIGHLIGHT_STYLE: Style = Style::new().bg(Color::Blue);
@@ -53,10 +53,15 @@ impl MenuRenderer for DefaultMenuRenderer {
 
         render_input_field(frame, left_content_chunks[1], state);
 
-        render_help_hint(frame, chunks[1]);
+        render_help_hint(frame, chunks[1], &state.list_mode);
 
         if state.ui_flags.show_preview {
-            draw_preview_pane(frame, content_chunks[1], &state.items);
+            draw_preview_pane(
+                frame,
+                content_chunks[1],
+                &state.items,
+                &state.list_mode,
+            );
         }
 
         match &state.mode {
@@ -126,15 +131,28 @@ fn render_input_field(frame: &mut Frame, area: Rect, state: &mut MenuState) {
     let prompt_style;
     let input;
 
-    if state.mode == MenuMode::Rename {
-        title = "Rename";
-        prompt_style = RENAME_PROMPT_STYLE;
-        input = &state.rename_input;
-    } else {
-        title = "Search";
-        prompt_style = PROMPT_STYLE;
-        input = &state.filter_input;
-    };
+    match state.mode {
+        MenuMode::Rename => {
+            title = "Rename";
+            prompt_style = RENAME_PROMPT_STYLE;
+            input = &state.rename_input;
+        }
+        MenuMode::CreateFromLayoutName => {
+            title = "Session name";
+            prompt_style = RENAME_PROMPT_STYLE;
+            input = &state.rename_input;
+        }
+        MenuMode::CreateFromLayoutWorkdir => {
+            title = "Working directory";
+            prompt_style = RENAME_PROMPT_STYLE;
+            input = &state.rename_input;
+        }
+        _ => {
+            title = "Search";
+            prompt_style = PROMPT_STYLE;
+            input = &state.filter_input;
+        }
+    }
 
     let input_block = Block::default()
         .borders(Borders::ALL)
@@ -159,35 +177,56 @@ fn render_input_field(frame: &mut Frame, area: Rect, state: &mut MenuState) {
     frame.render_widget(input, chunks[1]);
 }
 
-fn render_help_hint(frame: &mut Frame, area: Rect) {
-    let help_hint = Paragraph::new("C-h: Help | Esc: Quit")
-        .alignment(Alignment::Center)
-        .style(SUBTLE_STYLE);
+fn render_help_hint(frame: &mut Frame, area: Rect, list_mode: &ListMode) {
+    let mode_hint = match list_mode {
+        ListMode::Sessions => "[Sessions] C-l: Layouts",
+        ListMode::Layouts => "[Layouts] C-l: Sessions",
+    };
+
+    let help_hint =
+        Paragraph::new(format!("{mode_hint} | C-h: Help | Esc: Quit"))
+            .alignment(Alignment::Center)
+            .style(SUBTLE_STYLE);
 
     frame.render_widget(help_hint, area);
 }
 
-fn draw_preview_pane(frame: &mut Frame, chunk: Rect, items: &ItemsState) {
+fn draw_preview_pane(
+    frame: &mut Frame,
+    chunk: Rect,
+    items: &ItemsState,
+    list_mode: &ListMode,
+) {
     let preview_block = Block::default().borders(Borders::ALL).title("Preview");
 
-    let preview_content = generate_preview_content(items);
+    let preview_content = generate_preview_content(items, list_mode);
     let preview = Paragraph::new(preview_content).block(preview_block);
 
     frame.render_widget(preview, chunk);
 }
 
-fn generate_preview_content(items: &ItemsState) -> String {
+fn generate_preview_content(
+    items: &ItemsState,
+    list_mode: &ListMode,
+) -> String {
     let Some((_, selection)) = items.get_selected_item() else {
         return String::new();
     };
 
-    load_session_from_config(&selection.name)
-        .ok()
-        .and_then(|session_str| {
-            serde_yaml::from_str::<Session>(&session_str).ok()
-        })
-        .map(|session| session.get_preview())
-        .unwrap_or_default()
+    match list_mode {
+        ListMode::Sessions => {
+            load_config(StorageKind::Session, &selection.name)
+                .ok()
+                .and_then(|yaml| serde_yaml::from_str::<Session>(&yaml).ok())
+                .map(|session| session.get_preview())
+                .unwrap_or_default()
+        }
+        ListMode::Layouts => load_config(StorageKind::Layout, &selection.name)
+            .ok()
+            .and_then(|yaml| serde_yaml::from_str::<TmuxLayout>(&yaml).ok())
+            .map(|layout| layout.get_preview())
+            .unwrap_or_default(),
+    }
 }
 
 fn draw_confirmation_popup(f: &mut Frame) {
