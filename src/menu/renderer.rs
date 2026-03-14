@@ -3,9 +3,12 @@ use std::rc::Rc;
 use ratatui::{
     Frame,
     layout::{Alignment, Constraint, Direction, Flex, Layout, Margin, Rect},
-    style::{Color, Style},
-    text::Line,
-    widgets::{Block, Borders, Clear, List, Paragraph, Wrap},
+    style::{Color, Modifier, Style},
+    text::{Line, Span},
+    widgets::{
+        Block, BorderType, Borders, Clear, List, ListItem, Paragraph,
+        Scrollbar, ScrollbarOrientation, ScrollbarState, Wrap,
+    },
 };
 
 use crate::{
@@ -17,12 +20,49 @@ use crate::{
     tmux::{layout::Layout as TmuxLayout, session::Session},
 };
 
-const HIGHLIGHT_STYLE: Style = Style::new().bg(Color::Blue);
-const SUBTLE_STYLE: Style = Style::new().fg(Color::DarkGray);
-const POPUP_STYLE: Style = Style::new().fg(Color::Blue).bg(Color::Gray);
-const ERROR_POPUP_STYLE: Style = Style::new().fg(Color::Red).bg(Color::Gray);
-const PROMPT_STYLE: Style = Style::new().fg(Color::Green);
-const RENAME_PROMPT_STYLE: Style = Style::new().fg(Color::Red);
+// Monokai color palette
+const MONOKAI_RED: Color = Color::Rgb(249, 38, 114);
+const MONOKAI_ORANGE: Color = Color::Rgb(253, 151, 31);
+const MONOKAI_GREEN: Color = Color::Rgb(166, 226, 46);
+const MONOKAI_CYAN: Color = Color::Rgb(102, 217, 239);
+const MONOKAI_PURPLE: Color = Color::Rgb(174, 129, 255);
+const MONOKAI_COMMENT: Color = Color::Rgb(117, 113, 94);
+const MONOKAI_FG: Color = Color::Rgb(248, 248, 242);
+
+struct Theme {
+    accent: Color,
+    highlight: Style,
+    border: Style,
+    prompt: Style,
+}
+
+const SESSIONS_THEME: Theme = Theme {
+    accent: MONOKAI_CYAN,
+    highlight: Style::new().bg(Color::Rgb(26, 74, 90)),
+    border: Style::new().fg(MONOKAI_CYAN),
+    prompt: Style::new().fg(MONOKAI_CYAN),
+};
+
+const LAYOUTS_THEME: Theme = Theme {
+    accent: MONOKAI_PURPLE,
+    highlight: Style::new().bg(Color::Rgb(58, 42, 90)),
+    border: Style::new().fg(MONOKAI_PURPLE),
+    prompt: Style::new().fg(MONOKAI_PURPLE),
+};
+
+fn theme_for(list_mode: &ListMode) -> &'static Theme {
+    match list_mode {
+        ListMode::Sessions => &SESSIONS_THEME,
+        ListMode::Layouts => &LAYOUTS_THEME,
+    }
+}
+
+const SUBTLE_STYLE: Style = Style::new().fg(MONOKAI_COMMENT);
+const POPUP_STYLE: Style =
+    Style::new().fg(MONOKAI_CYAN).bg(Color::Rgb(39, 40, 34));
+const ERROR_POPUP_STYLE: Style =
+    Style::new().fg(MONOKAI_RED).bg(Color::Rgb(39, 40, 34));
+const RENAME_PROMPT_STYLE: Style = Style::new().fg(MONOKAI_ORANGE);
 
 const PREVIEW_WIDTH_RATIO: u16 = 40;
 
@@ -42,6 +82,7 @@ pub struct DefaultMenuRenderer;
 
 impl MenuRenderer for DefaultMenuRenderer {
     fn draw(&self, frame: &mut Frame, state: &mut MenuState) {
+        let theme = theme_for(&state.list_mode);
         let chunks = crate_main_layout(frame.area());
         let content_chunks =
             create_content_layout(chunks[0], state.ui_flags.show_preview);
@@ -51,11 +92,17 @@ impl MenuRenderer for DefaultMenuRenderer {
             .constraints([Constraint::Min(3), Constraint::Length(3)])
             .split(content_chunks[0]);
 
-        render_results_list(frame, left_content_chunks[0], &mut state.items);
+        render_results_list(
+            frame,
+            left_content_chunks[0],
+            &mut state.items,
+            &state.list_mode,
+            theme,
+        );
 
-        render_input_field(frame, left_content_chunks[1], state);
+        render_input_field(frame, left_content_chunks[1], state, theme);
 
-        render_help_hint(frame, chunks[1], &state.list_mode);
+        render_help_hint(frame, chunks[1], &state.list_mode, theme);
 
         if state.ui_flags.show_preview {
             draw_preview_pane(
@@ -64,6 +111,7 @@ impl MenuRenderer for DefaultMenuRenderer {
                 &state.items,
                 &state.list_mode,
                 state.preview_scroll,
+                theme,
             );
         }
 
@@ -103,16 +151,18 @@ fn render_results_list(
     frame: &mut Frame,
     area: Rect,
     items_state: &mut ItemsState,
+    list_mode: &ListMode,
+    theme: &Theme,
 ) {
-    let items: Vec<String> = items_state
-        .get_filtered_items()
-        .iter()
-        .map(|i| i.to_string())
-        .collect();
+    let results_block = Block::default()
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
+        .border_style(theme.border)
+        .title("Results");
 
-    let results_block = Block::default().borders(Borders::ALL).title("Results");
+    let filtered = items_state.get_filtered_items();
 
-    if items.is_empty() {
+    if filtered.is_empty() {
         frame.render_widget(
             Paragraph::new("No results...")
                 .block(results_block)
@@ -122,14 +172,92 @@ fn render_results_list(
         return;
     }
 
+    let items: Vec<ListItem> = filtered
+        .iter()
+        .map(|(item, match_indices)| {
+            styled_list_item(item, list_mode, match_indices)
+        })
+        .collect();
+
+    let item_count = filtered.len();
+
     let list = List::new(items)
         .block(results_block)
-        .highlight_style(HIGHLIGHT_STYLE);
+        .highlight_style(theme.highlight);
 
     frame.render_stateful_widget(list, area, &mut items_state.list_state);
+
+    let visible_height = area.height.saturating_sub(2) as usize;
+    if item_count > visible_height {
+        let mut scrollbar_state = ScrollbarState::new(item_count)
+            .position(items_state.list_state.selected().unwrap_or(0));
+        let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
+            .style(Style::new().fg(MONOKAI_COMMENT));
+        frame.render_stateful_widget(
+            scrollbar,
+            area.inner(Margin {
+                vertical: 1,
+                horizontal: 0,
+            }),
+            &mut scrollbar_state,
+        );
+    }
 }
 
-fn render_input_field(frame: &mut Frame, area: Rect, state: &mut MenuState) {
+fn styled_list_item<'a>(
+    item: &crate::menu::item::MenuItem,
+    list_mode: &ListMode,
+    match_indices: &[usize],
+) -> ListItem<'a> {
+    let mut spans = Vec::new();
+
+    if *list_mode == ListMode::Sessions {
+        if item.active && item.saved {
+            spans.push(Span::styled(
+                "\u{25cf} ",
+                Style::new().fg(MONOKAI_GREEN),
+            ));
+        } else if item.active {
+            spans.push(Span::styled(
+                "\u{25cf} ",
+                Style::new().fg(MONOKAI_ORANGE),
+            ));
+        } else {
+            spans.push(Span::raw("  "));
+        }
+    }
+
+    let is_inactive = *list_mode == ListMode::Sessions && !item.active;
+    let default_style = if is_inactive {
+        SUBTLE_STYLE
+    } else {
+        Style::default()
+    };
+
+    if match_indices.is_empty() {
+        spans.push(Span::styled(item.name.clone(), default_style));
+    } else {
+        let match_style =
+            Style::new().fg(MONOKAI_RED).add_modifier(Modifier::BOLD);
+        for (i, ch) in item.name.chars().enumerate() {
+            let s = ch.to_string();
+            if match_indices.contains(&i) {
+                spans.push(Span::styled(s, match_style));
+            } else {
+                spans.push(Span::styled(s, default_style));
+            }
+        }
+    }
+
+    ListItem::new(Line::from(spans))
+}
+
+fn render_input_field(
+    frame: &mut Frame,
+    area: Rect,
+    state: &mut MenuState,
+    theme: &Theme,
+) {
     let title;
     let prompt_style;
     let input;
@@ -152,13 +280,14 @@ fn render_input_field(frame: &mut Frame, area: Rect, state: &mut MenuState) {
         }
         _ => {
             title = "Search";
-            prompt_style = PROMPT_STYLE;
+            prompt_style = theme.prompt;
             input = &state.filter_input;
         }
     }
 
     let input_block = Block::default()
         .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
         .border_style(prompt_style)
         .title(title);
 
@@ -180,16 +309,37 @@ fn render_input_field(frame: &mut Frame, area: Rect, state: &mut MenuState) {
     frame.render_widget(input, chunks[1]);
 }
 
-fn render_help_hint(frame: &mut Frame, area: Rect, list_mode: &ListMode) {
-    let mode_hint = match list_mode {
-        ListMode::Sessions => "[Sessions] C-l: Layouts",
-        ListMode::Layouts => "[Layouts] C-l: Sessions",
+fn render_help_hint(
+    frame: &mut Frame,
+    area: Rect,
+    list_mode: &ListMode,
+    theme: &Theme,
+) {
+    let accent_bold =
+        Style::new().fg(theme.accent).add_modifier(Modifier::BOLD);
+    let dim = SUBTLE_STYLE;
+    let key_style = Style::new().fg(MONOKAI_FG);
+
+    let mode_label = match list_mode {
+        ListMode::Sessions => "[Sessions]",
+        ListMode::Layouts => "[Layouts]",
+    };
+    let toggle_target = match list_mode {
+        ListMode::Sessions => "Layouts",
+        ListMode::Layouts => "Sessions",
     };
 
-    let help_hint =
-        Paragraph::new(format!("{mode_hint} | C-h: Help | Esc: Quit"))
-            .alignment(Alignment::Center)
-            .style(SUBTLE_STYLE);
+    let line = Line::from(vec![
+        Span::styled(mode_label, accent_bold),
+        Span::styled(" C-l", key_style),
+        Span::styled(format!(": {toggle_target} | "), dim),
+        Span::styled("C-h", key_style),
+        Span::styled(": Help | ", dim),
+        Span::styled("Esc", key_style),
+        Span::styled(": Quit", dim),
+    ]);
+
+    let help_hint = Paragraph::new(line).alignment(Alignment::Center);
 
     frame.render_widget(help_hint, area);
 }
@@ -200,8 +350,13 @@ fn draw_preview_pane(
     items: &ItemsState,
     list_mode: &ListMode,
     scroll: u16,
+    theme: &Theme,
 ) {
-    let preview_block = Block::default().borders(Borders::ALL).title("Preview");
+    let preview_block = Block::default()
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
+        .border_style(theme.border)
+        .title("Preview");
 
     let available_width = chunk.width.saturating_sub(2) as usize;
     let preview_content =

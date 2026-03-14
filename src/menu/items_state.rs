@@ -6,7 +6,7 @@ use crate::menu::item::MenuItem;
 /// Manages the item list, fuzzy filtering, and selection cursor.
 pub struct ItemsState {
     pub items: Vec<MenuItem>,
-    pub filtered_items_idx: Vec<usize>,
+    pub filtered_items_idx: Vec<(usize, Vec<usize>)>,
     pub list_state: ListState,
 
     matcher: SkimMatcherV2,
@@ -21,7 +21,9 @@ impl ItemsState {
         sort_items(&mut items);
 
         let mut state = Self {
-            filtered_items_idx: (0..items.len()).collect(),
+            filtered_items_idx: (0..items.len())
+                .map(|i| (i, Vec::new()))
+                .collect(),
             items,
             list_state,
             matcher: fuzzy_matcher::skim::SkimMatcherV2::default(),
@@ -35,16 +37,18 @@ impl ItemsState {
     /// Returns the selected item's filtered index and a clone of it.
     pub fn get_selected_item(&self) -> Option<(usize, MenuItem)> {
         let idx = self.list_state.selected()?;
-        let &item_idx = self.filtered_items_idx.get(idx)?;
+        let &(item_idx, _) = self.filtered_items_idx.get(idx)?;
         let item = self.items.get(item_idx)?.clone();
         Some((idx, item))
     }
 
-    /// Returns references to items that match the current filter.
-    pub fn get_filtered_items(&self) -> Vec<&MenuItem> {
+    /// Returns references to items and their fuzzy match indices.
+    pub fn get_filtered_items(&self) -> Vec<(&MenuItem, &[usize])> {
         self.filtered_items_idx
             .iter()
-            .map(|&idx| self.items.get(idx).unwrap())
+            .map(|(idx, indices)| {
+                (self.items.get(*idx).unwrap(), indices.as_slice())
+            })
             .collect()
     }
 
@@ -97,7 +101,8 @@ impl ItemsState {
     pub fn replace_items(&mut self, mut items: Vec<MenuItem>) {
         sort_items(&mut items);
         self.items = items;
-        self.filtered_items_idx = (0..self.items.len()).collect();
+        self.filtered_items_idx =
+            (0..self.items.len()).map(|i| (i, Vec::new())).collect();
         self.reset_position();
     }
 
@@ -110,16 +115,18 @@ impl ItemsState {
     /// Re-filters items by fuzzy-matching against `input`, keeping the current selection.
     pub fn update_filter(&mut self, input: &str) {
         if input.is_empty() {
-            self.filtered_items_idx = (0..self.items.len()).collect();
+            self.filtered_items_idx =
+                (0..self.items.len()).map(|i| (i, Vec::new())).collect();
         } else {
             self.filtered_items_idx = self
                 .items
                 .iter()
                 .enumerate()
-                .filter(|(_, item)| {
-                    self.matcher.fuzzy_match(&item.name, input).is_some()
+                .filter_map(|(idx, item)| {
+                    self.matcher
+                        .fuzzy_indices(&item.name, input)
+                        .map(|(_, indices)| (idx, indices))
                 })
-                .map(|(idx, _)| idx)
                 .collect();
         }
     }
