@@ -111,6 +111,19 @@ pub fn edit(session_name: Option<&str>) -> Result<()> {
     Ok(())
 }
 
+/// Opens a config file (session or layout) in `$EDITOR`.
+pub fn edit_config(kind: StorageKind, name: &str) -> Result<()> {
+    let path = get_config_file_path(kind, name)?;
+    let path_str = escape(path.as_os_str().to_string_lossy());
+
+    Command::new("sh")
+        .arg("-c")
+        .arg(format!("$EDITOR {path_str}"))
+        .status()?;
+
+    Ok(())
+}
+
 /// Reloads a running session from its saved config.
 pub fn reload(session_name: Option<&str>) -> Result<()> {
     anyhow::ensure!(

@@ -172,10 +172,15 @@ fn handle_edit(
     };
 
     if selection.saved {
+        let kind = match state.list_mode {
+            ListMode::Sessions => StorageKind::Session,
+            ListMode::Layouts => StorageKind::Layout,
+        };
+
         disable_raw_mode()?;
         execute!(io::stdout(), LeaveAlternateScreen)?;
 
-        actions::edit(Some(&selection.name))?;
+        actions::edit_config(kind, &selection.name)?;
 
         enable_raw_mode()?;
         execute!(io::stdout(), EnterAlternateScreen)?;
