@@ -5,7 +5,9 @@ use ratatui::{
     layout::{Alignment, Constraint, Direction, Flex, Layout, Margin, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, BorderType, Borders, Clear, List, Paragraph, Wrap},
+    widgets::{
+        Block, BorderType, Borders, Clear, List, ListItem, Paragraph, Wrap,
+    },
 };
 
 use crate::{
@@ -82,6 +84,7 @@ impl MenuRenderer for DefaultMenuRenderer {
             frame,
             left_content_chunks[0],
             &mut state.items,
+            &state.list_mode,
             theme,
         );
 
@@ -136,21 +139,18 @@ fn render_results_list(
     frame: &mut Frame,
     area: Rect,
     items_state: &mut ItemsState,
+    list_mode: &ListMode,
     theme: &Theme,
 ) {
-    let items: Vec<String> = items_state
-        .get_filtered_items()
-        .iter()
-        .map(|i| i.to_string())
-        .collect();
-
     let results_block = Block::default()
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
         .border_style(theme.border)
         .title("Results");
 
-    if items.is_empty() {
+    let filtered = items_state.get_filtered_items();
+
+    if filtered.is_empty() {
         frame.render_widget(
             Paragraph::new("No results...")
                 .block(results_block)
@@ -160,11 +160,41 @@ fn render_results_list(
         return;
     }
 
+    let items: Vec<ListItem> = filtered
+        .iter()
+        .map(|item| styled_list_item(item, list_mode))
+        .collect();
+
     let list = List::new(items)
         .block(results_block)
         .highlight_style(theme.highlight);
 
     frame.render_stateful_widget(list, area, &mut items_state.list_state);
+}
+
+fn styled_list_item<'a>(
+    item: &crate::menu::item::MenuItem,
+    list_mode: &ListMode,
+) -> ListItem<'a> {
+    let mut spans = Vec::new();
+
+    if *list_mode == ListMode::Sessions {
+        if item.active && item.saved {
+            spans
+                .push(Span::styled("\u{25cf} ", Style::new().fg(Color::Green)));
+        } else if item.active {
+            spans.push(Span::styled(
+                "\u{25cf} ",
+                Style::new().fg(Color::Yellow),
+            ));
+        } else {
+            spans.push(Span::raw("  "));
+        }
+    }
+
+    spans.push(Span::raw(item.name.clone()));
+
+    ListItem::new(Line::from(spans))
 }
 
 fn render_input_field(
