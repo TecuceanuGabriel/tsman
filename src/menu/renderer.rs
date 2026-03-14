@@ -30,7 +30,7 @@ const CONFIRMATION_POPUP_WIDTH: u16 = 15;
 const CONFIRMATION_POPUP_HEIGHT: u16 = 3;
 
 const HELP_POPUP_WIDTH: u16 = 60;
-const HELP_POPUP_HEIGHT: u16 = 14;
+const HELP_POPUP_HEIGHT: u16 = 16;
 
 /// Draws the menu UI to a ratatui [`Frame`].
 pub trait MenuRenderer {
@@ -290,6 +290,7 @@ fn draw_help_popup(f: &mut Frame) {
         Line::from("C-d   → Delete/kill"),
         Line::from("C-s   → Save session"),
         Line::from("C-k   → Kill session"),
+        Line::from("C-o   → Reload session"),
         Line::from("Enter → Open session"),
     ];
 

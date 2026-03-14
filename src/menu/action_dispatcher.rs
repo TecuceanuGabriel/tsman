@@ -54,6 +54,7 @@ impl ActionDispatcher for DefaultActionDispacher {
             MenuAction::Save => handle_save(state)?,
             MenuAction::Rename => handle_rename(state)?,
             MenuAction::Kill => handle_kill(state)?,
+            MenuAction::Reload => handle_reload(state)?,
             MenuAction::MoveSelection(delta) => {
                 state.items.move_selection(delta)
             }
@@ -238,6 +239,34 @@ fn handle_kill(state: &mut MenuState) -> Result<()> {
         state
             .items
             .update_filter(&state.filter_input.lines().join("\n"));
+    }
+
+    Ok(())
+}
+
+fn handle_reload(state: &mut MenuState) -> Result<()> {
+    if state.list_mode != ListMode::Sessions {
+        return Ok(());
+    }
+
+    let Some((_, selection)) = state.items.get_selected_item() else {
+        return Ok(());
+    };
+
+    if !selection.saved || !selection.active {
+        state.mode = MenuMode::ErrorPopup(
+            "Session must be both active and saved to reload".to_string(),
+        );
+        return Ok(());
+    }
+
+    match actions::reload(Some(&selection.name)) {
+        Ok(()) => {
+            state.should_exit = true;
+        }
+        Err(err) => {
+            state.mode = MenuMode::ErrorPopup(err.to_string());
+        }
     }
 
     Ok(())
