@@ -19,6 +19,15 @@ use crate::{
     tmux::{layout::Layout as TmuxLayout, session::Session},
 };
 
+// Monokai color palette
+const MONOKAI_RED: Color = Color::Rgb(249, 38, 114);
+const MONOKAI_ORANGE: Color = Color::Rgb(253, 151, 31);
+const MONOKAI_GREEN: Color = Color::Rgb(166, 226, 46);
+const MONOKAI_CYAN: Color = Color::Rgb(102, 217, 239);
+const MONOKAI_PURPLE: Color = Color::Rgb(174, 129, 255);
+const MONOKAI_COMMENT: Color = Color::Rgb(117, 113, 94);
+const MONOKAI_FG: Color = Color::Rgb(248, 248, 242);
+
 struct Theme {
     accent: Color,
     highlight: Style,
@@ -27,17 +36,17 @@ struct Theme {
 }
 
 const SESSIONS_THEME: Theme = Theme {
-    accent: Color::Blue,
-    highlight: Style::new().bg(Color::Blue),
-    border: Style::new().fg(Color::Blue),
-    prompt: Style::new().fg(Color::Blue),
+    accent: MONOKAI_CYAN,
+    highlight: Style::new().bg(Color::Rgb(26, 74, 90)),
+    border: Style::new().fg(MONOKAI_CYAN),
+    prompt: Style::new().fg(MONOKAI_CYAN),
 };
 
 const LAYOUTS_THEME: Theme = Theme {
-    accent: Color::Cyan,
-    highlight: Style::new().bg(Color::Cyan),
-    border: Style::new().fg(Color::Cyan),
-    prompt: Style::new().fg(Color::Cyan),
+    accent: MONOKAI_PURPLE,
+    highlight: Style::new().bg(Color::Rgb(58, 42, 90)),
+    border: Style::new().fg(MONOKAI_PURPLE),
+    prompt: Style::new().fg(MONOKAI_PURPLE),
 };
 
 fn theme_for(list_mode: &ListMode) -> &'static Theme {
@@ -47,10 +56,12 @@ fn theme_for(list_mode: &ListMode) -> &'static Theme {
     }
 }
 
-const SUBTLE_STYLE: Style = Style::new().fg(Color::DarkGray);
-const POPUP_STYLE: Style = Style::new().fg(Color::Blue).bg(Color::Gray);
-const ERROR_POPUP_STYLE: Style = Style::new().fg(Color::Red).bg(Color::Gray);
-const RENAME_PROMPT_STYLE: Style = Style::new().fg(Color::Red);
+const SUBTLE_STYLE: Style = Style::new().fg(MONOKAI_COMMENT);
+const POPUP_STYLE: Style =
+    Style::new().fg(MONOKAI_CYAN).bg(Color::Rgb(39, 40, 34));
+const ERROR_POPUP_STYLE: Style =
+    Style::new().fg(MONOKAI_RED).bg(Color::Rgb(39, 40, 34));
+const RENAME_PROMPT_STYLE: Style = Style::new().fg(MONOKAI_ORANGE);
 
 const PREVIEW_WIDTH_RATIO: u16 = 40;
 
@@ -162,7 +173,9 @@ fn render_results_list(
 
     let items: Vec<ListItem> = filtered
         .iter()
-        .map(|item| styled_list_item(item, list_mode))
+        .map(|(item, match_indices)| {
+            styled_list_item(item, list_mode, match_indices)
+        })
         .collect();
 
     let list = List::new(items)
@@ -175,24 +188,41 @@ fn render_results_list(
 fn styled_list_item<'a>(
     item: &crate::menu::item::MenuItem,
     list_mode: &ListMode,
+    match_indices: &[usize],
 ) -> ListItem<'a> {
     let mut spans = Vec::new();
 
     if *list_mode == ListMode::Sessions {
         if item.active && item.saved {
-            spans
-                .push(Span::styled("\u{25cf} ", Style::new().fg(Color::Green)));
+            spans.push(Span::styled(
+                "\u{25cf} ",
+                Style::new().fg(MONOKAI_GREEN),
+            ));
         } else if item.active {
             spans.push(Span::styled(
                 "\u{25cf} ",
-                Style::new().fg(Color::Yellow),
+                Style::new().fg(MONOKAI_ORANGE),
             ));
         } else {
             spans.push(Span::raw("  "));
         }
     }
 
-    spans.push(Span::raw(item.name.clone()));
+    if match_indices.is_empty() {
+        spans.push(Span::raw(item.name.clone()));
+    } else {
+        let match_style = Style::new()
+            .fg(Color::Rgb(249, 38, 114))
+            .add_modifier(Modifier::BOLD);
+        for (i, ch) in item.name.chars().enumerate() {
+            let s = ch.to_string();
+            if match_indices.contains(&i) {
+                spans.push(Span::styled(s, match_style));
+            } else {
+                spans.push(Span::raw(s));
+            }
+        }
+    }
 
     ListItem::new(Line::from(spans))
 }
@@ -263,7 +293,7 @@ fn render_help_hint(
     let accent_bold =
         Style::new().fg(theme.accent).add_modifier(Modifier::BOLD);
     let dim = SUBTLE_STYLE;
-    let key_style = Style::new().fg(Color::Gray);
+    let key_style = Style::new().fg(MONOKAI_FG);
 
     let mode_label = match list_mode {
         ListMode::Sessions => "[Sessions]",
