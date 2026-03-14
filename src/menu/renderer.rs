@@ -3,8 +3,8 @@ use std::rc::Rc;
 use ratatui::{
     Frame,
     layout::{Alignment, Constraint, Direction, Flex, Layout, Margin, Rect},
-    style::{Color, Style},
-    text::Line,
+    style::{Color, Modifier, Style},
+    text::{Line, Span},
     widgets::{Block, BorderType, Borders, Clear, List, Paragraph, Wrap},
 };
 
@@ -17,7 +17,6 @@ use crate::{
     tmux::{layout::Layout as TmuxLayout, session::Session},
 };
 
-#[allow(dead_code)]
 struct Theme {
     accent: Color,
     highlight: Style,
@@ -88,7 +87,7 @@ impl MenuRenderer for DefaultMenuRenderer {
 
         render_input_field(frame, left_content_chunks[1], state, theme);
 
-        render_help_hint(frame, chunks[1], &state.list_mode);
+        render_help_hint(frame, chunks[1], &state.list_mode, theme);
 
         if state.ui_flags.show_preview {
             draw_preview_pane(
@@ -225,16 +224,37 @@ fn render_input_field(
     frame.render_widget(input, chunks[1]);
 }
 
-fn render_help_hint(frame: &mut Frame, area: Rect, list_mode: &ListMode) {
-    let mode_hint = match list_mode {
-        ListMode::Sessions => "[Sessions] C-l: Layouts",
-        ListMode::Layouts => "[Layouts] C-l: Sessions",
+fn render_help_hint(
+    frame: &mut Frame,
+    area: Rect,
+    list_mode: &ListMode,
+    theme: &Theme,
+) {
+    let accent_bold =
+        Style::new().fg(theme.accent).add_modifier(Modifier::BOLD);
+    let dim = SUBTLE_STYLE;
+    let key_style = Style::new().fg(Color::Gray);
+
+    let mode_label = match list_mode {
+        ListMode::Sessions => "[Sessions]",
+        ListMode::Layouts => "[Layouts]",
+    };
+    let toggle_target = match list_mode {
+        ListMode::Sessions => "Layouts",
+        ListMode::Layouts => "Sessions",
     };
 
-    let help_hint =
-        Paragraph::new(format!("{mode_hint} | C-h: Help | Esc: Quit"))
-            .alignment(Alignment::Center)
-            .style(SUBTLE_STYLE);
+    let line = Line::from(vec![
+        Span::styled(mode_label, accent_bold),
+        Span::styled(" C-l", key_style),
+        Span::styled(format!(": {toggle_target} | "), dim),
+        Span::styled("C-h", key_style),
+        Span::styled(": Help | ", dim),
+        Span::styled("Esc", key_style),
+        Span::styled(": Quit", dim),
+    ]);
+
+    let help_hint = Paragraph::new(line).alignment(Alignment::Center);
 
     frame.render_widget(help_hint, area);
 }
