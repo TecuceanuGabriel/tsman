@@ -9,6 +9,10 @@ repository = "https://github.com/TecuceanuGabriel/tsman"
 keywords = ["tmux", "session-manager", "tui", "fuzzy-finding", "productivity"]
 categories = ["command-line-utilities"]
 
+[lib]
+name = "tsman"
+path = "src/lib.rs"
+
 [[bin]]
 name = "tsman"
 path = "src/main.rs"
