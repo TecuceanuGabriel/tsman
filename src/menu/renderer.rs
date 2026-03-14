@@ -6,7 +6,8 @@ use ratatui::{
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{
-        Block, BorderType, Borders, Clear, List, ListItem, Paragraph, Wrap,
+        Block, BorderType, Borders, Clear, List, ListItem, Paragraph,
+        Scrollbar, ScrollbarOrientation, ScrollbarState, Wrap,
     },
 };
 
@@ -178,11 +179,29 @@ fn render_results_list(
         })
         .collect();
 
+    let item_count = filtered.len();
+
     let list = List::new(items)
         .block(results_block)
         .highlight_style(theme.highlight);
 
     frame.render_stateful_widget(list, area, &mut items_state.list_state);
+
+    let visible_height = area.height.saturating_sub(2) as usize;
+    if item_count > visible_height {
+        let mut scrollbar_state = ScrollbarState::new(item_count)
+            .position(items_state.list_state.selected().unwrap_or(0));
+        let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
+            .style(Style::new().fg(MONOKAI_COMMENT));
+        frame.render_stateful_widget(
+            scrollbar,
+            area.inner(Margin {
+                vertical: 1,
+                horizontal: 0,
+            }),
+            &mut scrollbar_state,
+        );
+    }
 }
 
 fn styled_list_item<'a>(
