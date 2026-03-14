@@ -141,7 +141,19 @@ pub fn rename_session(session_name: &str, new_name: &str) -> Result<()> {
 }
 
 /// Kills a tmux session by name.
+///
+/// If the session being killed is the one we are currently attached to,
+/// switches to the next active session first so tmux doesn't close the
+/// client. If there is no other session, the kill proceeds normally
+/// (tmux will detach).
 pub fn close_session(session_name: &str) -> Result<()> {
+    if let Ok(current) = get_session_name()
+        && current == session_name
+        && let Some(next) = get_next_session(session_name)?
+    {
+        attach_to_session(&next)?;
+    }
+
     Command::new("tmux")
         .arg("kill-session")
         .args(["-t", session_name])
@@ -149,6 +161,23 @@ pub fn close_session(session_name: &str) -> Result<()> {
         .context("Failed to kill session")?;
 
     Ok(())
+}
+
+/// Returns the next active session after `session_name` in the session list,
+/// or `None` if there are no other sessions.
+fn get_next_session(session_name: &str) -> Result<Option<String>> {
+    let sessions = list_active_sessions()?;
+    let pos = sessions.iter().position(|s| s == session_name).unwrap_or(0);
+
+    // Walk forward from the current position, wrapping around.
+    for i in 1..sessions.len() {
+        let candidate = &sessions[(pos + i) % sessions.len()];
+        if candidate != session_name {
+            return Ok(Some(candidate.clone()));
+        }
+    }
+
+    Ok(None)
 }
 
 /// Returns the name of the currently attached tmux session.
