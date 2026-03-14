@@ -19,7 +19,6 @@ pub enum MenuAction {
     ExitRenameMode,
     CloseErrorPopup,
     ToggleListMode,
-    EnterCreateNameMode,
     ConfirmCreateName,
     CreateFromLayout,
     ExitCreateMode,

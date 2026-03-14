@@ -90,7 +90,6 @@ impl ActionDispatcher for DefaultActionDispacher {
             MenuAction::ExitRenameMode => state.mode = MenuMode::Normal,
             MenuAction::CloseErrorPopup => state.mode = MenuMode::Normal,
             MenuAction::ToggleListMode => handle_toggle_list_mode(state)?,
-            MenuAction::EnterCreateNameMode => handle_enter_create_name(state)?,
             MenuAction::ConfirmCreateName => handle_confirm_create_name(state)?,
             MenuAction::CreateFromLayout => handle_create_from_layout(state)?,
             MenuAction::ExitCreateMode => handle_exit_create_mode(state),

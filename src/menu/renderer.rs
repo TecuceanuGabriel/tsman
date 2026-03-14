@@ -69,7 +69,7 @@ impl MenuRenderer for DefaultMenuRenderer {
         match &state.mode {
             MenuMode::ConfirmationPopup => draw_confirmation_popup(frame),
             MenuMode::HelpPopup => draw_help_popup(frame),
-            MenuMode::ErrorPopup(message) => draw_error(frame, &message),
+            MenuMode::ErrorPopup(message) => draw_error(frame, message),
             _ => {}
         }
     }

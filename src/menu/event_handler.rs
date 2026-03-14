@@ -98,10 +98,8 @@ fn handle_help_popup_key(key: KeyEvent) -> MenuAction {
     }
 }
 
-fn handle_error_popup_key(key: KeyEvent) -> MenuAction {
-    match key.code {
-        _ => MenuAction::CloseErrorPopup,
-    }
+fn handle_error_popup_key(_key: KeyEvent) -> MenuAction {
+    MenuAction::CloseErrorPopup
 }
 
 fn handle_create_name_mode_key(key: KeyEvent) -> MenuAction {
