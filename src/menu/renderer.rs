@@ -493,6 +493,7 @@ fn draw_help_popup(f: &mut Frame) {
         Line::from("C-t       → Toggle preview"),
         Line::from("C-h       → Toggle help"),
         Line::from("C-w       → Delete last word"),
+        Line::from("C-u       → Delete to line start"),
         Line::from("S-↑ / S-↓ → Scroll preview"),
     ];
 

@@ -12,6 +12,7 @@ pub enum MenuAction {
     AppendToInput(char),
     DeleteFromInput,
     RemoveLastWord,
+    DeleteToLineStart,
     TogglePreview,
     ScrollPreviewDown,
     ScrollPreviewUp,

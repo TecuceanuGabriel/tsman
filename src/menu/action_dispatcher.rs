@@ -64,6 +64,11 @@ impl ActionDispatcher for DefaultActionDispacher {
                     t.delete_word();
                 });
             }
+            MenuAction::DeleteToLineStart => {
+                state.handle_textarea_input(|t| {
+                    t.delete_line_by_head();
+                });
+            }
             MenuAction::AppendToInput(c) => {
                 state.handle_textarea_input(|t| {
                     t.insert_char(c);

@@ -66,6 +66,7 @@ fn handle_normal_mode_key(key: KeyEvent) -> MenuAction {
         (true, _, KeyCode::Char('t')) => MenuAction::TogglePreview,
         (true, _, KeyCode::Char('h')) => MenuAction::ToggleHelp,
         (true, _, KeyCode::Char('w')) => MenuAction::RemoveLastWord,
+        (true, _, KeyCode::Char('u')) => MenuAction::DeleteToLineStart,
 
         (false, true, KeyCode::Up) => MenuAction::ScrollPreviewUp,
         (false, true, KeyCode::Down) => MenuAction::ScrollPreviewDown,
@@ -85,6 +86,7 @@ fn handle_rename_mode_key(key: KeyEvent) -> MenuAction {
     match (key.modifiers.contains(KeyModifiers::CONTROL), key.code) {
         (true, KeyCode::Char('c')) => MenuAction::ExitRenameMode,
         (true, KeyCode::Char('w')) => MenuAction::RemoveLastWord,
+        (true, KeyCode::Char('u')) => MenuAction::DeleteToLineStart,
 
         (false, KeyCode::Char(c)) => MenuAction::AppendToInput(c),
         (false, KeyCode::Backspace) => MenuAction::DeleteFromInput,
@@ -123,6 +125,7 @@ fn handle_create_name_mode_key(key: KeyEvent) -> MenuAction {
     match (key.modifiers.contains(KeyModifiers::CONTROL), key.code) {
         (true, KeyCode::Char('c')) => MenuAction::ExitCreateMode,
         (true, KeyCode::Char('w')) => MenuAction::RemoveLastWord,
+        (true, KeyCode::Char('u')) => MenuAction::DeleteToLineStart,
 
         (false, KeyCode::Char(c)) => MenuAction::AppendToInput(c),
         (false, KeyCode::Backspace) => MenuAction::DeleteFromInput,
@@ -137,6 +140,7 @@ fn handle_create_workdir_mode_key(key: KeyEvent) -> MenuAction {
     match (key.modifiers.contains(KeyModifiers::CONTROL), key.code) {
         (true, KeyCode::Char('c')) => MenuAction::ExitCreateMode,
         (true, KeyCode::Char('w')) => MenuAction::RemoveLastWord,
+        (true, KeyCode::Char('u')) => MenuAction::DeleteToLineStart,
 
         (false, KeyCode::Char(c)) => MenuAction::AppendToInput(c),
         (false, KeyCode::Backspace) => MenuAction::DeleteFromInput,
