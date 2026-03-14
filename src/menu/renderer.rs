@@ -17,11 +17,38 @@ use crate::{
     tmux::{layout::Layout as TmuxLayout, session::Session},
 };
 
-const HIGHLIGHT_STYLE: Style = Style::new().bg(Color::Blue);
+#[allow(dead_code)]
+struct Theme {
+    accent: Color,
+    highlight: Style,
+    border: Style,
+    prompt: Style,
+}
+
+const SESSIONS_THEME: Theme = Theme {
+    accent: Color::Blue,
+    highlight: Style::new().bg(Color::Blue),
+    border: Style::new().fg(Color::Blue),
+    prompt: Style::new().fg(Color::Blue),
+};
+
+const LAYOUTS_THEME: Theme = Theme {
+    accent: Color::Cyan,
+    highlight: Style::new().bg(Color::Cyan),
+    border: Style::new().fg(Color::Cyan),
+    prompt: Style::new().fg(Color::Cyan),
+};
+
+fn theme_for(list_mode: &ListMode) -> &'static Theme {
+    match list_mode {
+        ListMode::Sessions => &SESSIONS_THEME,
+        ListMode::Layouts => &LAYOUTS_THEME,
+    }
+}
+
 const SUBTLE_STYLE: Style = Style::new().fg(Color::DarkGray);
 const POPUP_STYLE: Style = Style::new().fg(Color::Blue).bg(Color::Gray);
 const ERROR_POPUP_STYLE: Style = Style::new().fg(Color::Red).bg(Color::Gray);
-const PROMPT_STYLE: Style = Style::new().fg(Color::Green);
 const RENAME_PROMPT_STYLE: Style = Style::new().fg(Color::Red);
 
 const PREVIEW_WIDTH_RATIO: u16 = 40;
@@ -42,6 +69,7 @@ pub struct DefaultMenuRenderer;
 
 impl MenuRenderer for DefaultMenuRenderer {
     fn draw(&self, frame: &mut Frame, state: &mut MenuState) {
+        let theme = theme_for(&state.list_mode);
         let chunks = crate_main_layout(frame.area());
         let content_chunks =
             create_content_layout(chunks[0], state.ui_flags.show_preview);
@@ -51,9 +79,14 @@ impl MenuRenderer for DefaultMenuRenderer {
             .constraints([Constraint::Min(3), Constraint::Length(3)])
             .split(content_chunks[0]);
 
-        render_results_list(frame, left_content_chunks[0], &mut state.items);
+        render_results_list(
+            frame,
+            left_content_chunks[0],
+            &mut state.items,
+            theme,
+        );
 
-        render_input_field(frame, left_content_chunks[1], state);
+        render_input_field(frame, left_content_chunks[1], state, theme);
 
         render_help_hint(frame, chunks[1], &state.list_mode);
 
@@ -64,6 +97,7 @@ impl MenuRenderer for DefaultMenuRenderer {
                 &state.items,
                 &state.list_mode,
                 state.preview_scroll,
+                theme,
             );
         }
 
@@ -103,6 +137,7 @@ fn render_results_list(
     frame: &mut Frame,
     area: Rect,
     items_state: &mut ItemsState,
+    theme: &Theme,
 ) {
     let items: Vec<String> = items_state
         .get_filtered_items()
@@ -110,7 +145,10 @@ fn render_results_list(
         .map(|i| i.to_string())
         .collect();
 
-    let results_block = Block::default().borders(Borders::ALL).title("Results");
+    let results_block = Block::default()
+        .borders(Borders::ALL)
+        .border_style(theme.border)
+        .title("Results");
 
     if items.is_empty() {
         frame.render_widget(
@@ -124,12 +162,17 @@ fn render_results_list(
 
     let list = List::new(items)
         .block(results_block)
-        .highlight_style(HIGHLIGHT_STYLE);
+        .highlight_style(theme.highlight);
 
     frame.render_stateful_widget(list, area, &mut items_state.list_state);
 }
 
-fn render_input_field(frame: &mut Frame, area: Rect, state: &mut MenuState) {
+fn render_input_field(
+    frame: &mut Frame,
+    area: Rect,
+    state: &mut MenuState,
+    theme: &Theme,
+) {
     let title;
     let prompt_style;
     let input;
@@ -152,7 +195,7 @@ fn render_input_field(frame: &mut Frame, area: Rect, state: &mut MenuState) {
         }
         _ => {
             title = "Search";
-            prompt_style = PROMPT_STYLE;
+            prompt_style = theme.prompt;
             input = &state.filter_input;
         }
     }
@@ -200,8 +243,12 @@ fn draw_preview_pane(
     items: &ItemsState,
     list_mode: &ListMode,
     scroll: u16,
+    theme: &Theme,
 ) {
-    let preview_block = Block::default().borders(Borders::ALL).title("Preview");
+    let preview_block = Block::default()
+        .borders(Borders::ALL)
+        .border_style(theme.border)
+        .title("Preview");
 
     let available_width = chunk.width.saturating_sub(2) as usize;
     let preview_content =
