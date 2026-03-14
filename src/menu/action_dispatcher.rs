@@ -229,6 +229,11 @@ fn handle_rename(state: &mut MenuState) -> Result<()> {
         actions::rename(&selection.name, &new_name)?;
     }
 
+    state.filter_input.delete_line_by_head();
+    state
+        .items
+        .update_filter(&state.filter_input.lines().join("\n"));
+
     Ok(())
 }
 
