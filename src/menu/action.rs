@@ -1,3 +1,4 @@
+/// Actions produced by the event handler and consumed by the action dispatcher.
 #[derive(Debug)]
 pub enum MenuAction {
     Open,

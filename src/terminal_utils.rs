@@ -11,9 +11,7 @@ use ratatui::{DefaultTerminal, Terminal, prelude::CrosstermBackend};
 
 use anyhow::Result;
 
-/// Initializes the terminal in raw mode and alternate screen.
-///
-/// Returns a [`DefaultTerminal`] that must later be passed to [`restore`].
+/// Enters raw mode and alternate screen. Must be paired with [`restore`].
 pub fn init() -> Result<DefaultTerminal> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -23,7 +21,7 @@ pub fn init() -> Result<DefaultTerminal> {
     Ok(terminal)
 }
 
-/// Restores the terminal to its normal mode and leaves the alternate screen.
+/// Leaves raw mode and alternate screen.
 pub fn restore(mut terminal: DefaultTerminal) -> Result<()> {
     disable_raw_mode()?;
     execute!(terminal.backend_mut(), LeaveAlternateScreen)?;

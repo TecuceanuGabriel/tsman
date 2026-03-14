@@ -3,6 +3,7 @@ use ratatui::widgets::ListState;
 
 use crate::menu::item::MenuItem;
 
+/// Manages the item list, fuzzy filtering, and selection cursor.
 pub struct ItemsState {
     pub items: Vec<MenuItem>,
     pub filtered_items_idx: Vec<usize>,
@@ -12,6 +13,7 @@ pub struct ItemsState {
 }
 
 impl ItemsState {
+    /// Creates a new state, sorting items and selecting the first one.
     pub fn new(mut items: Vec<MenuItem>) -> Self {
         let mut list_state = ListState::default();
         list_state.select(Some(0));
@@ -30,6 +32,7 @@ impl ItemsState {
         state
     }
 
+    /// Returns the selected item's filtered index and a clone of it.
     pub fn get_selected_item(&self) -> Option<(usize, MenuItem)> {
         let idx = self.list_state.selected()?;
         let &item_idx = self.filtered_items_idx.get(idx)?;
@@ -37,6 +40,7 @@ impl ItemsState {
         Some((idx, item))
     }
 
+    /// Returns references to items that match the current filter.
     pub fn get_filtered_items(&self) -> Vec<&MenuItem> {
         self.filtered_items_idx
             .iter()
@@ -44,6 +48,7 @@ impl ItemsState {
             .collect()
     }
 
+    /// Updates fields of the item matching `name`. `None` fields are left unchanged.
     pub fn update_item(
         &mut self,
         name: &str,
@@ -64,6 +69,7 @@ impl ItemsState {
         }
     }
 
+    /// Moves the selection cursor by `delta`, clamped to list bounds.
     pub fn move_selection(&mut self, delta: i32) {
         if let Some(selection_idx) = self.list_state.selected() {
             let new_selected =
@@ -76,11 +82,13 @@ impl ItemsState {
         }
     }
 
+    /// Removes an item by name and adjusts the selection.
     pub fn remove_item(&mut self, idx: usize, item: MenuItem) {
         self.items.retain(|i| i.name != item.name);
         self.list_state.select(Some(idx.saturating_sub(1)));
     }
 
+    /// Replaces the entire item list, resetting filter and selection.
     pub fn replace_items(&mut self, mut items: Vec<MenuItem>) {
         sort_items(&mut items);
         self.items = items;
@@ -88,11 +96,13 @@ impl ItemsState {
         self.reset_position();
     }
 
+    /// Re-filters items and resets the selection to the top.
     pub fn update_filter_and_reset(&mut self, input: &str) {
         self.update_filter(input);
         self.reset_position();
     }
 
+    /// Re-filters items by fuzzy-matching against `input`, keeping the current selection.
     pub fn update_filter(&mut self, input: &str) {
         if input.is_empty() {
             self.filtered_items_idx = (0..self.items.len()).collect();

@@ -1,7 +1,4 @@
-//! Command dispatcher for `tsman` CLI.
-//!
-//! This module takes parsed CLI arguments and executes the corresponding
-//! tmux session management action.
+//! Command dispatcher - routes parsed CLI arguments to the corresponding action.
 use std::collections::HashSet;
 use std::fs;
 use std::process::Command;
@@ -21,20 +18,7 @@ use crate::tmux::session::{Pane, Session, Window};
 use anyhow::{Context, Result};
 use shell_escape::escape;
 
-/// Handles CLI arguments and dispatches to the appropriate subcommand handler.
-///
-/// This is the main entry point for executing commands like:
-/// - `save`
-/// - `open`
-/// - `edit`
-/// - `delete`
-/// - `menu`
-///
-/// # Arguments
-/// * `args` – Parsed CLI arguments from [`crate::cli`].
-///
-/// # Errors
-/// Returns an error if the underlying command fails.
+/// Dispatches parsed CLI arguments to the matching subcommand handler.
 pub fn handle(args: Args) -> Result<()> {
     match args.command {
         Commands::Save { session_name } => save(session_name.as_deref()),
@@ -49,18 +33,6 @@ pub fn handle(args: Args) -> Result<()> {
     }
 }
 
-/// Saves the current tmux session configuration.
-///
-/// If `session_name` is provided, renames the saved session to that name.
-///
-/// # Arguments
-/// * `session_name` – Optional override for the current session name.
-///
-/// # Errors
-/// Returns an error if:
-/// - The current tmux session cannot be retrieved.
-/// - YAML serialization fails.
-/// - The configuration cannot be saved.
 fn save(session_name: Option<&str>) -> Result<()> {
     let mut current_session =
         get_session(None).context("Failed to get current session")?;
@@ -79,15 +51,7 @@ fn save(session_name: Option<&str>) -> Result<()> {
     Ok(())
 }
 
-/// Saves a specific tmux session configuration.
-///
-/// Similar to [`save`] but explicitly targets a given session by name.
-///
-/// # Arguments
-/// * `session_name` – Name of the session to save.
-///
-/// # Errors
-/// Same as [`save`].
+/// Saves the tmux session with the given name to disk.
 pub fn save_target(session_name: &str) -> Result<()> {
     let current_session = get_session(Some(session_name))
         .context("Failed to get current session")?;
@@ -102,19 +66,7 @@ pub fn save_target(session_name: &str) -> Result<()> {
     Ok(())
 }
 
-/// Opens (restores) a tmux session.
-///
-/// If the session is already active, attaches to it. Otherwise, loads it from
-/// the saved YAML config and restores it.
-///
-/// # Arguments
-/// * `session_name` – Name of the session to open.
-///
-/// # Errors
-/// Returns an error if:
-/// - The session cannot be found.
-/// - YAML deserialization fails.
-/// - tmux restoration commands fail.
+/// Restores a saved session, or attaches if it's already active.
 pub fn open(session_name: &str) -> Result<()> {
     if is_active_session(session_name)? {
         attach_to_session(session_name)?;
@@ -133,17 +85,7 @@ pub fn open(session_name: &str) -> Result<()> {
     Ok(())
 }
 
-/// Opens the session configuration file in `$EDITOR`.
-///
-/// # Arguments
-///
-/// * `session_name` – Optional name of the session to edit. If omitted, edits
-///   the current active session.
-///
-/// # Errors
-/// Returns an error if:
-/// - The session name cannot be determined.
-/// - The editor command fails.
+/// Opens a session's YAML config in `$EDITOR`. Falls back to the current session.
 pub fn edit(session_name: Option<&str>) -> Result<()> {
     let path = if let Some(name) = session_name {
         get_config_file_path(StorageKind::Session, name)?
@@ -162,19 +104,14 @@ pub fn edit(session_name: Option<&str>) -> Result<()> {
     Ok(())
 }
 
-/// Deletes a saved session configuration file.
-///
-/// # Arguments
-/// * `session_name` – Name of the session to delete.
-///
-/// # Errors
-/// Returns an error if the file cannot be removed.
+/// Deletes a saved session's YAML config from disk.
 pub fn delete(session_name: &str) -> Result<()> {
     let path = get_config_file_path(StorageKind::Session, session_name)?;
     fs::remove_file(path)?;
     Ok(())
 }
 
+/// Renames a saved session's config file and updates the name inside the YAML.
 pub fn rename(session_name: &str, new_name: &str) -> Result<()> {
     let path = get_config_file_path(StorageKind::Session, session_name)?;
     let mut new_path = path.clone();
@@ -199,22 +136,6 @@ pub fn rename(session_name: &str, new_name: &str) -> Result<()> {
     Ok(())
 }
 
-/// Launches an interactive menu for managing tmux sessions.
-///
-/// The menu displays all saved and active sessions and allows the user to:
-/// - Save
-/// - Open
-/// - Edit
-/// - Delete
-/// - Close
-///
-/// # Arguments
-/// * `show_preview` – Whether to show session previews.
-/// * `ask_for_confirmation` – Whether to prompt before destructive actions.
-///
-/// # Errors
-/// Returns an error if the menu fails to initialize, display, or perform
-/// any action.
 fn menu(show_preview: bool, ask_for_confirmation: bool) -> Result<()> {
     let mut terminal = terminal_utils::init()?;
 
@@ -234,17 +155,6 @@ fn menu(show_preview: bool, ask_for_confirmation: bool) -> Result<()> {
     Ok(())
 }
 
-/// Retrieves all sessions (saved and/or active) as menu items.
-///
-/// Performs a union of:
-/// - Saved sessions from [`list_saved_sessions`]
-/// - Active sessions from [`list_active_sessions`]
-///
-/// # Returns
-/// A vector of [`MenuItem`] with metadata indicating saved/active status.
-///
-/// # Errors
-/// Returns an error if listing sessions fails.
 fn get_all_sessions() -> Result<Vec<MenuItem>> {
     let saved_sessions: HashSet<String> =
         list_saved_configs(StorageKind::Session)?
@@ -287,9 +197,6 @@ fn handle_layout(command: LayoutCommands) -> Result<()> {
     }
 }
 
-/// Saves the current tmux session as a layout template.
-///
-/// Captures the window/pane structure without working directories.
 fn layout_save(layout_name: Option<&str>) -> Result<()> {
     let current_session =
         get_session(None).context("Failed to get current session")?;
@@ -310,9 +217,7 @@ fn layout_save(layout_name: Option<&str>) -> Result<()> {
     Ok(())
 }
 
-/// Creates a new tmux session from a saved layout template.
-///
-/// All panes start in the specified working directory.
+/// Creates a new tmux session from a saved layout, using `work_dir` for all panes.
 pub fn layout_create(
     layout_name: &str,
     work_dir: &str,
@@ -363,7 +268,6 @@ pub fn layout_create(
     Ok(())
 }
 
-/// Lists all saved layout templates.
 fn layout_list() -> Result<()> {
     let layouts = list_saved_configs(StorageKind::Layout)?;
     if layouts.is_empty() {
@@ -376,14 +280,12 @@ fn layout_list() -> Result<()> {
     Ok(())
 }
 
-/// Deletes a saved layout configuration file.
 fn layout_delete(layout_name: &str) -> Result<()> {
     let path = get_config_file_path(StorageKind::Layout, layout_name)?;
     fs::remove_file(path)?;
     Ok(())
 }
 
-/// Opens a layout configuration file in `$EDITOR`.
 fn layout_edit(layout_name: &str) -> Result<()> {
     let path = get_config_file_path(StorageKind::Layout, layout_name)?;
 

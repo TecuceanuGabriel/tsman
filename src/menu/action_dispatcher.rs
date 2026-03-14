@@ -21,6 +21,7 @@ use crate::{
     util::validate_session_name,
 };
 
+/// Executes a [`MenuAction`] by mutating state and calling tmux/persistence APIs.
 pub trait ActionDispatcher {
     fn dispach(
         &self,
@@ -30,6 +31,7 @@ pub trait ActionDispatcher {
     ) -> Result<()>;
 }
 
+/// Default action dispatcher that handles all [`MenuAction`] variants.
 pub struct DefaultActionDispacher;
 
 impl ActionDispatcher for DefaultActionDispacher {

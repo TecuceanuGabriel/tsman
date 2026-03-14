@@ -1,4 +1,4 @@
-//! CLI argument parser
+//! CLI argument parser - defines all commands and subcommands via `clap`.
 use crate::util::validate_session_name;
 use clap::{Parser, Subcommand};
 
@@ -29,9 +29,6 @@ pub struct Args {
 }
 
 /// CLI subcommands for `tsman`.
-///
-/// Each variant corresponds to an action that can be performed on `tmux`
-/// sessions.
 #[derive(Debug, Subcommand)]
 pub enum Commands {
     #[command(

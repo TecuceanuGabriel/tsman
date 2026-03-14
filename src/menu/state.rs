@@ -3,12 +3,14 @@ use tui_textarea::TextArea;
 
 use crate::menu::{item::MenuItem, items_state::ItemsState, ui_flags::UiFlags};
 
+/// Whether the menu is showing sessions or layouts.
 #[derive(PartialEq)]
 pub enum ListMode {
     Sessions,
     Layouts,
 }
 
+/// Current interaction mode of the menu.
 #[derive(PartialEq)]
 pub enum MenuMode {
     Normal,
@@ -20,6 +22,7 @@ pub enum MenuMode {
     CreateFromLayoutWorkdir,
 }
 
+/// All mutable state for the menu UI.
 pub struct MenuState<'a> {
     pub filter_input: TextArea<'a>,
     pub rename_input: TextArea<'a>,
@@ -34,6 +37,7 @@ pub struct MenuState<'a> {
 }
 
 impl<'a> MenuState<'a> {
+    /// Creates initial menu state from the given items and flags.
     pub fn new(
         items: Vec<MenuItem>,
         show_preview: bool,
@@ -57,6 +61,7 @@ impl<'a> MenuState<'a> {
         }
     }
 
+    /// Returns the textarea active for the current mode (rename or filter).
     pub fn get_active_textarea(&mut self) -> &mut TextArea<'a> {
         match self.mode {
             MenuMode::Rename
@@ -66,6 +71,7 @@ impl<'a> MenuState<'a> {
         }
     }
 
+    /// Applies an edit operation to the active textarea and updates the filter if in normal mode.
     pub fn handle_textarea_input<F>(&mut self, operation: F)
     where
         F: FnOnce(&mut TextArea),

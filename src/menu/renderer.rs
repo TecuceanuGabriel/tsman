@@ -32,10 +32,12 @@ const CONFIRMATION_POPUP_HEIGHT: u16 = 3;
 const HELP_POPUP_WIDTH: u16 = 60;
 const HELP_POPUP_HEIGHT: u16 = 14;
 
+/// Draws the menu UI to a ratatui [`Frame`].
 pub trait MenuRenderer {
     fn draw(&self, frame: &mut Frame, state: &mut MenuState);
 }
 
+/// Default renderer with list, filter input, preview pane, and popups.
 pub struct DefaultMenuRenderer;
 
 impl MenuRenderer for DefaultMenuRenderer {

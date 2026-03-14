@@ -2,7 +2,7 @@ use std::fmt;
 
 use regex::Regex;
 
-/// Error type returned when a session name is invalid.
+/// Invalid session name error - used as clap's `value_parser` error type.
 #[derive(Debug)]
 pub struct SessionNameError(String);
 
@@ -14,22 +14,7 @@ impl fmt::Display for SessionNameError {
     }
 }
 
-/// Validates a session name according to the rules:
-///
-/// - Must be between 1 and 30 characters long.
-/// - Can only contain alphanumeric characters, underscores (`_`),
-///   and hyphens (`-`).
-///
-/// # Errors
-///
-/// Returns a [`SessionNameError`] if the name is invalid.
-///
-/// # Examples
-/// ```
-/// # use tsman::validate_session_name;
-/// assert!(validate_session_name("valid_name-123").is_ok());
-/// assert!(validate_session_name("invalid name").is_err());
-/// ```
+/// Checks that a name is 1-30 chars and matches `[a-zA-Z0-9_-]`.
 pub fn validate_session_name(name: &str) -> Result<String, SessionNameError> {
     let re = Regex::new(r"^[a-zA-Z0-9_-]{1,30}$").unwrap();
     if !re.is_match(name) {

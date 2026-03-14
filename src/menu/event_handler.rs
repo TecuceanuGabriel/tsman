@@ -5,10 +5,12 @@ use crate::menu::{
     state::{MenuMode, MenuState},
 };
 
+/// Maps terminal events to [`MenuAction`]s based on the current mode.
 pub trait EventHandler {
     fn handle_event(&self, event: Event, state: &MenuState) -> MenuAction;
 }
 
+/// Default keyboard-driven event handler.
 pub struct DefaultEventHandler;
 
 impl EventHandler for DefaultEventHandler {

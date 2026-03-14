@@ -1,59 +1,34 @@
-//! Tmux session model
-//!
-//! Serializable data structures representing the hierarchy of a tmux session
-//! [`Session`] -> [`Window`] -> [`Pane`]
+//! Tmux session model - [`Session`] -> [`Window`] -> [`Pane`] hierarchy.
 use serde::{Deserialize, Serialize};
 
-/// Represents a tmux pane that lives inside a tmux window.
+/// A single tmux pane.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Pane {
-    /// Index of the pane.
     pub index: String,
-    /// Command running in the pane currently, if any.
     pub current_command: Option<String>,
-    /// Working directory of the pane.
     pub work_dir: String,
 }
 
-/// Represents a tmux window that has one or more panes.
+/// A tmux window containing one or more [`Pane`]s.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Window {
-    /// Index of the window.
     pub index: String,
-    /// Name of the window.
     pub name: String,
-    /// Tmux layout string describing the window structure.
+    /// Tmux layout string (e.g. `"bb62,80x24,0,0,0"`).
     pub layout: String,
-    /// List of panes inside the window.
     pub panes: Vec<Pane>,
 }
 
-/// Represents a tmux session that has one or more windows.
+/// A full tmux session snapshot with one or more [`Window`]s.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Session {
-    /// Name of the session.
     pub name: String,
-    /// Default working directory for new panes.
     pub work_dir: String,
-    /// List of windows inside the session.
     pub windows: Vec<Window>,
 }
 
 impl Pane {
-    /// Returns a textual preview of the pane.
-    ///
-    /// # Arguments
-    /// * `show_index` - Whether to include the pane index in the preview.
-    ///
-    /// # Example
-    /// ```
-    /// let pane = Pane {
-    ///     index: "0".into(),
-    ///     current_command: Some("bash".into()),
-    ///     work_dir: "...".into()
-    /// };
-    /// assert_eq!(pane.get_preview(true), "(0) bash");
-    /// ```
+    /// Returns a textual preview, optionally prefixed with the pane index.
     pub fn get_preview(&self, show_index: bool) -> String {
         let mut preview = String::new();
 
@@ -71,13 +46,7 @@ impl Pane {
 }
 
 impl Window {
-    /// Returns a textual preview of the window and its panes.
-    ///
-    /// # Arguments
-    /// * `add_connector` - Whether to draw a connector line before panes.
-    ///
-    /// This method formats the window name, followed by each pane preview,
-    /// in a tree-like visual layout.
+    /// Returns a tree-like preview of the window and its panes.
     pub fn get_preview(&self, add_connector: bool) -> String {
         if self.panes.len() == 1 {
             return format!(
@@ -112,10 +81,7 @@ impl Window {
 }
 
 impl Session {
-    /// Returns a textual preview of the session, including all windows and panes.
-    ///
-    /// This method creates a tree-like view of the tmux session, showing the
-    /// hierarchy from session → windows → panes.
+    /// Returns a tree-like preview of the full session hierarchy.
     pub fn get_preview(&self) -> String {
         let mut preview = format!("{}:\n", self.name);
 

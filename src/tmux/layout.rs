@@ -1,34 +1,21 @@
-//! Tmux layout model
-//!
-//! Serializable data structures representing a layout template.
-//! A layout captures the window/pane structure of a tmux session
-//! without working directories, allowing reuse across projects.
-//!
-//! [`Layout`] -> [`LayoutWindow`] -> [`LayoutPane`]
+//! Tmux layout model - [`Layout`] -> [`LayoutWindow`], capturing structure without work dirs.
 use serde::{Deserialize, Serialize};
 
 use super::session::{Session, Window};
 
-/// Represents a window within a layout template.
+/// A window in a layout template - captures structure but not working directories.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct LayoutWindow {
-    /// Index of the window.
     pub index: String,
-    /// Name of the window.
     pub name: String,
-    /// Tmux layout string describing the window structure.
     pub layout: String,
-    /// Number of panes in the window.
     pub pane_count: usize,
 }
 
-/// A layout is a session template that captures window/pane structure
-/// but NOT working directories.
+/// A reusable session template - window/pane structure without working directories.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Layout {
-    /// Name of the layout.
     pub name: String,
-    /// List of windows in the layout.
     pub windows: Vec<LayoutWindow>,
 }
 
@@ -53,7 +40,7 @@ impl From<&Session> for Layout {
 }
 
 impl LayoutWindow {
-    /// Returns a textual preview of the window.
+    /// Returns a one-line preview showing the window name and pane count.
     pub fn get_preview(&self) -> String {
         let panes_label = if self.pane_count == 1 {
             "1 pane".to_string()
@@ -66,7 +53,7 @@ impl LayoutWindow {
 }
 
 impl Layout {
-    /// Returns a textual preview of the layout, including all windows.
+    /// Returns a tree-like preview of the layout and its windows.
     pub fn get_preview(&self) -> String {
         let mut preview = format!("{}:\n", self.name);
 

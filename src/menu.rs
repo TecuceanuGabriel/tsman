@@ -1,4 +1,4 @@
-//! TUI menu
+//! Interactive TUI menu for managing sessions and layouts.
 use std::time::Duration;
 
 use crossterm::event::{self};
@@ -22,7 +22,7 @@ use crate::menu::item::MenuItem;
 use crate::menu::renderer::*;
 use crate::menu::state::MenuState;
 
-/// Menu state.
+/// Top-level menu that owns state, renderer, event handler, and action dispatcher.
 pub struct Menu<'a> {
     state: MenuState<'a>,
     renderer: Box<dyn MenuRenderer>,
@@ -31,13 +31,7 @@ pub struct Menu<'a> {
 }
 
 impl<'a> Menu<'a> {
-    /// Creates a new [`MenuUi`] instance.
-    ///
-    /// # Arguments
-    /// * `items` - The list of menu items to display.
-    /// * `show_preview` - Whether to show the preview pane.
-    /// * `ask_for_confirmation` - Whether to require confirmation before
-    ///   deleting.
+    /// Creates a new [`Menu`] with the given items and configuration.
     pub fn new(
         items: Vec<MenuItem>,
         show_preview: bool,
@@ -54,10 +48,7 @@ impl<'a> Menu<'a> {
         }
     }
 
-    /// Runs the menu loop until the user exits.
-    ///
-    /// # Arguments
-    /// * `terminal` - The terminal backend to draw on.
+    /// Runs the render/event loop until the user exits.
     pub fn run(&mut self, terminal: &mut DefaultTerminal) -> Result<()> {
         while !self.state.should_exit {
             terminal

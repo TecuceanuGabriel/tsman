@@ -1,23 +1,17 @@
 use std::fmt;
 
-/// A single item in the menu list.
+/// A session or layout entry displayed in the menu.
 #[derive(Debug, Clone)]
 pub struct MenuItem {
-    /// The session name.
     pub name: String,
-    /// Whether this session is saved to disk.
+    /// Whether this item has a config saved to disk.
     pub saved: bool,
-    /// Whether this session is currently active.
+    /// Whether this item corresponds to a currently running tmux session.
     pub active: bool,
 }
 
 impl MenuItem {
     /// Creates a new menu item.
-    ///
-    /// # Arguments
-    /// * `name` - The session name.
-    /// * `saved` - Whether the session is saved to storage.
-    /// * `active` - Whether the session is currently active.
     pub fn new(name: String, saved: bool, active: bool) -> Self {
         Self {
             name,
