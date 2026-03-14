@@ -148,26 +148,23 @@ pub fn delete(session_name: &str) -> Result<()> {
     Ok(())
 }
 
-/// Renames a saved session's config file and updates the name inside the YAML.
-pub fn rename(session_name: &str, new_name: &str) -> Result<()> {
-    let path = get_config_file_path(StorageKind::Session, session_name)?;
+/// Renames a saved config file and updates the name inside the YAML.
+pub fn rename(kind: StorageKind, old_name: &str, new_name: &str) -> Result<()> {
+    let path = get_config_file_path(kind, old_name)?;
     let mut new_path = path.clone();
     new_path.set_file_name(new_name);
     new_path.set_extension("yaml");
     fs::rename(path, new_path)?;
 
-    let old_yaml = load_config(StorageKind::Session, new_name)
-        .context("Failed to read session from config file")?;
-    let mut session: Session =
-        serde_yaml::from_str(&old_yaml).with_context(|| {
-            format!("Failed to deserialize session from yaml {old_yaml}")
-        })?;
-    session.name = new_name.to_owned();
+    let raw_yaml =
+        load_config(kind, new_name).context("Failed to read config file")?;
+    let mut value: serde_yaml::Value = serde_yaml::from_str(&raw_yaml)
+        .with_context(|| format!("Failed to deserialize yaml: {raw_yaml}"))?;
+    value["name"] = serde_yaml::Value::String(new_name.to_owned());
 
-    let updated_yaml = serde_yaml::to_string(&session).with_context(|| {
-        format!("Failed to serialize session {session:#?} to yaml")
-    })?;
-    save_config(StorageKind::Session, &session.name, updated_yaml)
+    let updated_yaml =
+        serde_yaml::to_string(&value).context("Failed to serialize yaml")?;
+    save_config(kind, new_name, updated_yaml)
         .context("Failed to save yaml config to disk")?;
 
     Ok(())

@@ -9,6 +9,7 @@ const DEFAULT_SESSION_STORAGE_DIR: &str = ".tsessions";
 const DEFAULT_LAYOUT_STORAGE_DIR: &str = ".tlayouts";
 
 /// Selects between session and layout storage directories.
+#[derive(Clone, Copy)]
 pub enum StorageKind {
     Session,
     Layout,

@@ -226,7 +226,11 @@ fn handle_rename(state: &mut MenuState) -> Result<()> {
     }
 
     if selection.saved {
-        actions::rename(&selection.name, &new_name)?;
+        let kind = match state.list_mode {
+            ListMode::Sessions => StorageKind::Session,
+            ListMode::Layouts => StorageKind::Layout,
+        };
+        actions::rename(kind, &selection.name, &new_name)?;
     }
 
     state.filter_input.delete_line_by_head();
