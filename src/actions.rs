@@ -3,7 +3,9 @@ use std::collections::HashSet;
 use std::fs;
 use std::process::Command;
 
-use crate::cli::{Args, Commands, LayoutCommands};
+use clap::CommandFactory;
+
+use crate::cli::{self, Args, Commands, LayoutCommands};
 use crate::menu::Menu;
 use crate::menu::action_dispatcher::DefaultActionDispacher;
 use crate::menu::event_handler::DefaultEventHandler;
@@ -30,6 +32,10 @@ pub fn handle(args: Args) -> Result<()> {
             preview,
             ask_for_confirmation,
         } => menu(preview, ask_for_confirmation),
+        Commands::Completions { shell } => {
+            completions(shell);
+            Ok(())
+        }
         Commands::Layout { command } => handle_layout(command),
     }
 }
@@ -165,6 +171,15 @@ pub fn rename(session_name: &str, new_name: &str) -> Result<()> {
         .context("Failed to save yaml config to disk")?;
 
     Ok(())
+}
+
+fn completions(shell: clap_complete::Shell) {
+    clap_complete::generate(
+        shell,
+        &mut cli::Args::command(),
+        "tsman",
+        &mut std::io::stdout(),
+    );
 }
 
 fn menu(show_preview: bool, ask_for_confirmation: bool) -> Result<()> {

@@ -1,6 +1,7 @@
 //! CLI argument parser - defines all commands and subcommands via `clap`.
 use crate::util::validate_session_name;
 use clap::{Parser, Subcommand};
+use clap_complete::Shell;
 
 /// Command-line argument parser for `tsman`.
 #[derive(Debug, Parser)]
@@ -108,6 +109,22 @@ currently active sessions.",
             help = "Prompt for confirmation before deleting a session"
         )]
         ask_for_confirmation: bool,
+    },
+
+    #[command(
+        about = "Generate shell completions",
+        long_about = "Generate shell completion scripts for the specified shell.
+Output is written to stdout.
+
+Examples:
+  tsman completions bash > ~/.local/share/bash-completion/completions/tsman
+  tsman completions zsh > ~/.zfunc/_tsman
+  tsman completions fish > ~/.config/fish/completions/tsman.fish",
+        alias = "c"
+    )]
+    Completions {
+        /// Shell to generate completions for
+        shell: Shell,
     },
 
     #[command(
