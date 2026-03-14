@@ -227,18 +227,24 @@ fn styled_list_item<'a>(
         }
     }
 
-    if match_indices.is_empty() {
-        spans.push(Span::raw(item.name.clone()));
+    let is_inactive = *list_mode == ListMode::Sessions && !item.active;
+    let default_style = if is_inactive {
+        SUBTLE_STYLE
     } else {
-        let match_style = Style::new()
-            .fg(Color::Rgb(249, 38, 114))
-            .add_modifier(Modifier::BOLD);
+        Style::default()
+    };
+
+    if match_indices.is_empty() {
+        spans.push(Span::styled(item.name.clone(), default_style));
+    } else {
+        let match_style =
+            Style::new().fg(MONOKAI_RED).add_modifier(Modifier::BOLD);
         for (i, ch) in item.name.chars().enumerate() {
             let s = ch.to_string();
             if match_indices.contains(&i) {
                 spans.push(Span::styled(s, match_style));
             } else {
-                spans.push(Span::raw(s));
+                spans.push(Span::styled(s, default_style));
             }
         }
     }
