@@ -346,12 +346,10 @@ pub fn layout_create(
                 index: lw.index.clone(),
                 name: lw.name.clone(),
                 layout: lw.layout.clone(),
-                panes: lw
-                    .panes
-                    .iter()
-                    .map(|lp| Pane {
-                        index: lp.index.clone(),
-                        current_command: lp.current_command.clone(),
+                panes: (0..lw.pane_count)
+                    .map(|i| Pane {
+                        index: i.to_string(),
+                        current_command: None,
                         work_dir: work_dir.clone(),
                     })
                     .collect(),

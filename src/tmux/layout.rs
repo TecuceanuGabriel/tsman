@@ -7,17 +7,7 @@
 //! [`Layout`] -> [`LayoutWindow`] -> [`LayoutPane`]
 use serde::{Deserialize, Serialize};
 
-use super::session::{Pane, Session, Window};
-
-/// Represents a pane within a layout template.
-/// Unlike [`Pane`], this does not store a working directory.
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct LayoutPane {
-    /// Index of the pane.
-    pub index: String,
-    /// Command to run in the pane, if any.
-    pub current_command: Option<String>,
-}
+use super::session::{Session, Window};
 
 /// Represents a window within a layout template.
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -28,8 +18,8 @@ pub struct LayoutWindow {
     pub name: String,
     /// Tmux layout string describing the window structure.
     pub layout: String,
-    /// List of panes inside the window.
-    pub panes: Vec<LayoutPane>,
+    /// Number of panes in the window.
+    pub pane_count: usize,
 }
 
 /// A layout is a session template that captures window/pane structure
@@ -42,22 +32,13 @@ pub struct Layout {
     pub windows: Vec<LayoutWindow>,
 }
 
-impl From<&Pane> for LayoutPane {
-    fn from(pane: &Pane) -> Self {
-        LayoutPane {
-            index: pane.index.clone(),
-            current_command: pane.current_command.clone(),
-        }
-    }
-}
-
 impl From<&Window> for LayoutWindow {
     fn from(window: &Window) -> Self {
         LayoutWindow {
             index: window.index.clone(),
             name: window.name.clone(),
             layout: window.layout.clone(),
-            panes: window.panes.iter().map(LayoutPane::from).collect(),
+            pane_count: window.panes.len(),
         }
     }
 }
@@ -71,93 +52,33 @@ impl From<&Session> for Layout {
     }
 }
 
-impl LayoutPane {
-    /// Returns a textual preview of the pane.
-    ///
-    /// # Arguments
-    /// * `show_index` - Whether to include the pane index in the preview.
-    pub fn get_preview(&self, show_index: bool) -> String {
-        let mut preview = String::new();
-
-        if show_index {
-            preview += &format!("({}) ", self.index);
-        }
-
-        preview += match self.current_command.as_ref() {
-            Some(cmd) => cmd,
-            None => "_",
+impl LayoutWindow {
+    /// Returns a textual preview of the window.
+    pub fn get_preview(&self) -> String {
+        let panes_label = if self.pane_count == 1 {
+            "1 pane".to_string()
+        } else {
+            format!("{} panes", self.pane_count)
         };
 
-        preview
-    }
-}
-
-impl LayoutWindow {
-    /// Returns a textual preview of the window and its panes.
-    ///
-    /// # Arguments
-    /// * `add_connector` - Whether to draw a connector line before panes.
-    pub fn get_preview(&self, add_connector: bool) -> String {
-        if self.panes.len() == 1 {
-            return format!(
-                "{}: {}\n",
-                self.name,
-                self.panes[0].get_preview(false)
-            );
-        }
-
-        let mut preview = format!("{}:\n", self.name);
-
-        let connector = if add_connector { "║" } else { " " };
-
-        let mut pane_idx = 0;
-        while pane_idx < self.panes.len() - 1 {
-            preview += &format!(
-                " {}  ╠═ {}\n",
-                connector,
-                self.panes[pane_idx].get_preview(true)
-            );
-            pane_idx += 1;
-        }
-
-        preview += &format!(
-            " {}  ╚═ {}\n",
-            connector,
-            self.panes[pane_idx].get_preview(true)
-        );
-
-        preview
+        format!("{}: {}", self.name, panes_label)
     }
 }
 
 impl Layout {
-    /// Returns a textual preview of the layout, including all windows and panes.
+    /// Returns a textual preview of the layout, including all windows.
     pub fn get_preview(&self) -> String {
         let mut preview = format!("{}:\n", self.name);
 
-        let mut window_idx = 0;
-        while window_idx < self.windows.len() - 1 {
-            let window = &self.windows[window_idx];
-            let end_connector =
-                if window.panes.len() > 1 { "╦═" } else { "" };
-
-            preview +=
-                &format!(" ╠══{} {}", end_connector, window.get_preview(true));
-            window_idx += 1;
+        for (i, window) in self.windows.iter().enumerate() {
+            let is_last = i == self.windows.len() - 1;
+            let branch = if is_last {
+                " ╚══ "
+            } else {
+                " ╠══ "
+            };
+            preview += &format!("{}{}\n", branch, window.get_preview());
         }
-
-        let last_window = &self.windows[window_idx];
-        let end_connector = if last_window.panes.len() > 1 {
-            "╦═"
-        } else {
-            ""
-        };
-
-        preview += &format!(
-            " ╚══{} {}",
-            end_connector,
-            last_window.get_preview(false)
-        );
 
         preview
     }
