@@ -201,7 +201,9 @@ fn draw_preview_pane(
 ) {
     let preview_block = Block::default().borders(Borders::ALL).title("Preview");
 
-    let preview_content = generate_preview_content(items, list_mode);
+    let available_width = chunk.width.saturating_sub(2) as usize;
+    let preview_content =
+        generate_preview_content(items, list_mode, available_width);
     let preview = Paragraph::new(preview_content).block(preview_block);
 
     frame.render_widget(preview, chunk);
@@ -210,6 +212,7 @@ fn draw_preview_pane(
 fn generate_preview_content(
     items: &ItemsState,
     list_mode: &ListMode,
+    width: usize,
 ) -> String {
     let Some((_, selection)) = items.get_selected_item() else {
         return String::new();
@@ -226,7 +229,7 @@ fn generate_preview_content(
         ListMode::Layouts => load_config(StorageKind::Layout, &selection.name)
             .ok()
             .and_then(|yaml| serde_yaml::from_str::<TmuxLayout>(&yaml).ok())
-            .map(|layout| layout.get_preview())
+            .map(|layout| layout.get_preview(width))
             .unwrap_or_default(),
     }
 }
