@@ -61,7 +61,7 @@ impl<'a> MenuState<'a> {
             mode: MenuMode::Normal,
             list_mode: ListMode::Sessions,
             pending_create_name: String::new(),
-            ui_flags: UiFlags::new(show_preview, ask_for_confirmation),
+            ui_flags: UiFlags::new(ask_for_confirmation, show_preview),
             preview_scroll: 0,
             last_key: None,
             last_key_instant: None,
