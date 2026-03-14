@@ -56,8 +56,11 @@ impl<'a> Menu<'a> {
 
             if event::poll(Duration::from_millis(50))? {
                 let event = event::read()?;
-                let action =
+                let (action, key_label) =
                     self.event_handler.handle_event(event, &self.state);
+                if let Some(label) = key_label {
+                    self.state.set_last_key(label);
+                }
                 self.action_dispacher.dispach(
                     action,
                     &mut self.state,

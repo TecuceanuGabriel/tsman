@@ -102,7 +102,13 @@ impl MenuRenderer for DefaultMenuRenderer {
 
         render_input_field(frame, left_content_chunks[1], state, theme);
 
-        render_help_hint(frame, chunks[1], &state.list_mode, theme);
+        render_help_hint(
+            frame,
+            chunks[1],
+            &state.list_mode,
+            state.visible_last_key(),
+            theme,
+        );
 
         if state.ui_flags.show_preview {
             draw_preview_pane(
@@ -313,6 +319,7 @@ fn render_help_hint(
     frame: &mut Frame,
     area: Rect,
     list_mode: &ListMode,
+    last_key: Option<&str>,
     theme: &Theme,
 ) {
     let accent_bold =
@@ -329,7 +336,8 @@ fn render_help_hint(
         ListMode::Layouts => "Sessions",
     };
 
-    let line = Line::from(vec![
+    // Left side: mode + hints
+    let left_spans = vec![
         Span::styled(mode_label, accent_bold),
         Span::styled(" C-l", key_style),
         Span::styled(format!(": {toggle_target} | "), dim),
@@ -337,11 +345,36 @@ fn render_help_hint(
         Span::styled(": Help | ", dim),
         Span::styled("Esc", key_style),
         Span::styled(": Quit", dim),
-    ]);
+    ];
 
-    let help_hint = Paragraph::new(line).alignment(Alignment::Center);
+    let hint_line = Line::from(left_spans);
+    let hint = Paragraph::new(hint_line).alignment(Alignment::Center);
 
-    frame.render_widget(help_hint, area);
+    if let Some(label) = last_key {
+        let chunks = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([
+                Constraint::Min(0),
+                Constraint::Length(label.len() as u16 + 5),
+            ])
+            .split(area);
+
+        frame.render_widget(hint, chunks[0]);
+
+        let key_indicator = Paragraph::new(Line::from(vec![
+            Span::styled("[", dim),
+            Span::styled(
+                label,
+                Style::new().fg(MONOKAI_ORANGE).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled("] ", dim),
+        ]))
+        .alignment(Alignment::Right);
+
+        frame.render_widget(key_indicator, chunks[1]);
+    } else {
+        frame.render_widget(hint, area);
+    }
 }
 
 fn draw_preview_pane(

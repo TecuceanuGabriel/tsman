@@ -1,3 +1,5 @@
+use std::time::{Duration, Instant};
+
 use ratatui::style::Style;
 use tui_textarea::TextArea;
 
@@ -33,6 +35,8 @@ pub struct MenuState<'a> {
     pub pending_create_name: String,
     pub ui_flags: UiFlags,
     pub preview_scroll: u16,
+    pub last_key: Option<String>,
+    pub last_key_instant: Option<Instant>,
 
     pub should_exit: bool,
 }
@@ -59,7 +63,30 @@ impl<'a> MenuState<'a> {
             pending_create_name: String::new(),
             ui_flags: UiFlags::new(show_preview, ask_for_confirmation),
             preview_scroll: 0,
+            last_key: None,
+            last_key_instant: None,
             should_exit: false,
+        }
+    }
+
+    /// How long the last-key indicator stays visible.
+    const KEY_DISPLAY_DURATION: Duration = Duration::from_millis(1500);
+
+    /// Records the label of the last key pressed.
+    pub fn set_last_key(&mut self, label: String) {
+        self.last_key = Some(label);
+        self.last_key_instant = Some(Instant::now());
+    }
+
+    /// Returns the key label if it's still within the display window.
+    pub fn visible_last_key(&self) -> Option<&str> {
+        match (&self.last_key, self.last_key_instant) {
+            (Some(label), Some(instant))
+                if instant.elapsed() < Self::KEY_DISPLAY_DURATION =>
+            {
+                Some(label)
+            }
+            _ => None,
         }
     }
 

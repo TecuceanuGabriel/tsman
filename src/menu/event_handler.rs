@@ -7,23 +7,31 @@ use crate::menu::{
 
 /// Maps terminal events to [`MenuAction`]s based on the current mode.
 pub trait EventHandler {
-    fn handle_event(&self, event: Event, state: &MenuState) -> MenuAction;
+    fn handle_event(
+        &self,
+        event: Event,
+        state: &MenuState,
+    ) -> (MenuAction, Option<String>);
 }
 
 /// Default keyboard-driven event handler.
 pub struct DefaultEventHandler;
 
 impl EventHandler for DefaultEventHandler {
-    fn handle_event(&self, event: Event, state: &MenuState) -> MenuAction {
+    fn handle_event(
+        &self,
+        event: Event,
+        state: &MenuState,
+    ) -> (MenuAction, Option<String>) {
         let Event::Key(key) = event else {
-            return MenuAction::Nop;
+            return (MenuAction::Nop, None);
         };
 
         if key.kind != KeyEventKind::Press {
-            return MenuAction::Nop;
+            return (MenuAction::Nop, None);
         }
 
-        match state.mode {
+        let action = match state.mode {
             MenuMode::Normal => handle_normal_mode_key(key),
             MenuMode::Rename => handle_rename_mode_key(key),
             MenuMode::HelpPopup => handle_help_popup_key(key),
@@ -33,7 +41,10 @@ impl EventHandler for DefaultEventHandler {
             MenuMode::CreateFromLayoutWorkdir => {
                 handle_create_workdir_mode_key(key)
             }
-        }
+        };
+
+        let label = key_event_to_label(key);
+        (action, label)
     }
 }
 
@@ -133,5 +144,24 @@ fn handle_create_workdir_mode_key(key: KeyEvent) -> MenuAction {
         (false, KeyCode::Esc) => MenuAction::ExitCreateMode,
 
         _ => MenuAction::Nop,
+    }
+}
+
+/// Converts a key event into a human-readable label for display.
+/// Returns `None` for plain character keys to avoid cluttering the indicator.
+fn key_event_to_label(key: KeyEvent) -> Option<String> {
+    let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
+    let shift = key.modifiers.contains(KeyModifiers::SHIFT);
+
+    match (ctrl, shift, key.code) {
+        (true, _, KeyCode::Char(c)) => Some(format!("C-{c}")),
+        (_, true, KeyCode::Up) => Some("S-Up".into()),
+        (_, true, KeyCode::Down) => Some("S-Down".into()),
+        (false, false, KeyCode::Enter) => Some("Enter".into()),
+        (false, false, KeyCode::Esc) => Some("Esc".into()),
+        (false, false, KeyCode::Backspace) => Some("Bksp".into()),
+        (false, false, KeyCode::Up) => Some("Up".into()),
+        (false, false, KeyCode::Down) => Some("Down".into()),
+        _ => None,
     }
 }
