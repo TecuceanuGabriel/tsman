@@ -12,7 +12,12 @@ use ratatui::DefaultTerminal;
 
 use crate::{actions, menu::state::MenuState, tmux};
 use crate::{
-    menu::{action::MenuAction, state::MenuMode},
+    menu::{
+        action::MenuAction,
+        item::MenuItem,
+        state::{ListMode, MenuMode},
+    },
+    persistence::{self, StorageKind},
     util::validate_session_name,
 };
 
@@ -35,7 +40,13 @@ impl ActionDispatcher for DefaultActionDispacher {
         terminal: &mut DefaultTerminal,
     ) -> Result<()> {
         match action {
-            MenuAction::Open => handle_open(state)?,
+            MenuAction::Open => {
+                if state.list_mode == ListMode::Layouts {
+                    handle_enter_create_name(state)?;
+                } else {
+                    handle_open(state)?;
+                }
+            }
             MenuAction::Delete => handle_delete(state)?,
             MenuAction::Edit => handle_edit(state, terminal)?,
             MenuAction::Save => handle_save(state)?,
@@ -75,6 +86,11 @@ impl ActionDispatcher for DefaultActionDispacher {
             MenuAction::EnterRenameMode => handle_enter_rename(state)?,
             MenuAction::ExitRenameMode => state.mode = MenuMode::Normal,
             MenuAction::CloseErrorPopup => state.mode = MenuMode::Normal,
+            MenuAction::ToggleListMode => handle_toggle_list_mode(state)?,
+            MenuAction::EnterCreateNameMode => handle_enter_create_name(state)?,
+            MenuAction::ConfirmCreateName => handle_confirm_create_name(state)?,
+            MenuAction::CreateFromLayout => handle_create_from_layout(state)?,
+            MenuAction::ExitCreateMode => handle_exit_create_mode(state),
             MenuAction::Exit => {
                 state.should_exit = true;
             }
@@ -239,4 +255,103 @@ fn handle_enter_rename(state: &mut MenuState) -> Result<()> {
     state.rename_input.insert_str(placeholder);
 
     Ok(())
+}
+
+fn handle_toggle_list_mode(state: &mut MenuState) -> Result<()> {
+    state.list_mode = match state.list_mode {
+        ListMode::Sessions => ListMode::Layouts,
+        ListMode::Layouts => ListMode::Sessions,
+    };
+
+    let items = match state.list_mode {
+        ListMode::Sessions => {
+            let saved: std::collections::HashSet<String> =
+                persistence::list_saved_configs(StorageKind::Session)?
+                    .into_iter()
+                    .collect();
+            let active: std::collections::HashSet<String> =
+                tmux::interface::list_active_sessions()?
+                    .into_iter()
+                    .collect();
+            let union: std::collections::HashSet<_> =
+                saved.union(&active).cloned().collect();
+            union
+                .into_iter()
+                .map(|name| {
+                    MenuItem::new(
+                        name.clone(),
+                        saved.contains(&name),
+                        active.contains(&name),
+                    )
+                })
+                .collect()
+        }
+        ListMode::Layouts => {
+            persistence::list_saved_configs(StorageKind::Layout)?
+                .into_iter()
+                .map(|name| MenuItem::new(name, true, false))
+                .collect()
+        }
+    };
+
+    state.items.replace_items(items);
+    state.filter_input.delete_line_by_head();
+
+    Ok(())
+}
+
+fn handle_enter_create_name(state: &mut MenuState) -> Result<()> {
+    if state.items.get_selected_item().is_none() {
+        return Ok(());
+    }
+
+    state.mode = MenuMode::CreateFromLayoutName;
+    state.rename_input.delete_line_by_head();
+
+    Ok(())
+}
+
+fn handle_confirm_create_name(state: &mut MenuState) -> Result<()> {
+    let name = state.rename_input.lines().join("\n");
+
+    if let Err(err) = validate_session_name(&name) {
+        state.mode = MenuMode::ErrorPopup(err.to_string());
+        return Ok(());
+    }
+
+    state.pending_create_name = name;
+    state.mode = MenuMode::CreateFromLayoutWorkdir;
+    state.rename_input.delete_line_by_head();
+
+    Ok(())
+}
+
+fn handle_create_from_layout(state: &mut MenuState) -> Result<()> {
+    let work_dir = state.rename_input.lines().join("\n");
+
+    let Some((_, selection)) = state.items.get_selected_item() else {
+        return Ok(());
+    };
+
+    let session_name = state.pending_create_name.clone();
+
+    match actions::layout_create(
+        &selection.name,
+        &work_dir,
+        Some(&session_name),
+    ) {
+        Ok(()) => {
+            state.should_exit = true;
+        }
+        Err(err) => {
+            state.mode = MenuMode::ErrorPopup(err.to_string());
+        }
+    }
+
+    Ok(())
+}
+
+fn handle_exit_create_mode(state: &mut MenuState) {
+    state.mode = MenuMode::Normal;
+    state.rename_input.delete_line_by_head();
 }

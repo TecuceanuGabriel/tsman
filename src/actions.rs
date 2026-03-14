@@ -313,7 +313,7 @@ fn layout_save(layout_name: Option<&str>) -> Result<()> {
 /// Creates a new tmux session from a saved layout template.
 ///
 /// All panes start in the specified working directory.
-fn layout_create(
+pub fn layout_create(
     layout_name: &str,
     work_dir: &str,
     session_name: Option<&str>,
