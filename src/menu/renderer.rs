@@ -5,7 +5,7 @@ use ratatui::{
     layout::{Alignment, Constraint, Direction, Flex, Layout, Margin, Rect},
     style::{Color, Style},
     text::Line,
-    widgets::{Block, Borders, Clear, List, Paragraph, Wrap},
+    widgets::{Block, BorderType, Borders, Clear, List, Paragraph, Wrap},
 };
 
 use crate::{
@@ -147,6 +147,7 @@ fn render_results_list(
 
     let results_block = Block::default()
         .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
         .border_style(theme.border)
         .title("Results");
 
@@ -202,6 +203,7 @@ fn render_input_field(
 
     let input_block = Block::default()
         .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
         .border_style(prompt_style)
         .title(title);
 
@@ -247,6 +249,7 @@ fn draw_preview_pane(
 ) {
     let preview_block = Block::default()
         .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
         .border_style(theme.border)
         .title("Preview");
 
