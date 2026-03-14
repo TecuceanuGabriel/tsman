@@ -69,6 +69,11 @@ impl ItemsState {
         }
     }
 
+    /// Re-sorts items by active status and name.
+    pub fn sort(&mut self) {
+        sort_items(&mut self.items);
+    }
+
     /// Moves the selection cursor by `delta`, clamped to list bounds.
     pub fn move_selection(&mut self, delta: i32) {
         if let Some(selection_idx) = self.list_state.selected() {

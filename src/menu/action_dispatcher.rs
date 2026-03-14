@@ -235,6 +235,7 @@ fn handle_kill(state: &mut MenuState) -> Result<()> {
             state.items.remove_item(idx, selection);
         }
 
+        state.items.sort();
         state
             .items
             .update_filter(&state.filter_input.lines().join("\n"));
