@@ -95,7 +95,7 @@ impl Grid {
         y_bottom: usize,
     ) {
         for row in (y_top + 1)..y_bottom {
-            self.set(x, row, '│');
+            self.set(x, row, resolve_junction(self.get(x, row), '│'));
         }
         // Junction characters at top and bottom
         self.set(x, y_top, resolve_junction(self.get(x, y_top), '┬'));
@@ -191,7 +191,11 @@ fn draw_splits(
                 if i > 0 {
                     grid.draw_vertical_divider(cx, y, y + h - 1);
                 }
-                draw_splits(grid, child, cx, y, *cw, h);
+                // Non-last children extend by 1 to include the shared divider column,
+                // so their internal splits connect to the divider.
+                let child_w =
+                    if i < children.len() - 1 { *cw + 1 } else { *cw };
+                draw_splits(grid, child, cx, y, child_w, h);
                 cx += cw;
             }
         }
@@ -203,7 +207,11 @@ fn draw_splits(
                 if i > 0 {
                     grid.draw_horizontal_divider(cy, x, x + w - 1);
                 }
-                draw_splits(grid, child, x, cy, w, *ch);
+                // Non-last children extend by 1 to include the shared divider row,
+                // so their internal splits connect to the divider.
+                let child_h =
+                    if i < children.len() - 1 { *ch + 1 } else { *ch };
+                draw_splits(grid, child, x, cy, w, child_h);
                 cy += ch;
             }
         }

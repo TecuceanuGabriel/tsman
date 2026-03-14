@@ -68,6 +68,43 @@ fn render_too_small_returns_none() {
 }
 
 #[test]
+fn render_hsplit_with_inner_vsplit_connects_dividers() {
+    // HSplit: left pane is VSplit (2 stacked), right pane is a leaf.
+    // The horizontal divider inside the left VSplit must connect to the
+    // vertical divider between the two HSplit children.
+    let node = layout_parser::parse(
+        "840e,147x36,0,0{66x36,0,0[66x18,0,0,158,66x17,0,19,159],80x36,67,0,157}",
+    )
+    .unwrap();
+    let lines = layout_renderer::render(&node, "zsh", 40, 8).unwrap();
+
+    // Find the vertical divider column from a plain interior row
+    let interior_row = &lines[2];
+    let divider_col = interior_row
+        .chars()
+        .enumerate()
+        .skip(1) // skip left border
+        .find(|&(_, ch)| ch == '│')
+        .map(|(i, _)| i)
+        .expect("expected vertical divider in interior row");
+
+    // Find the row with the horizontal divider (├ on the left)
+    let hdiv_row = lines
+        .iter()
+        .position(|l| l.starts_with("├"))
+        .expect("expected a row starting with ├");
+
+    let row_chars: Vec<char> = lines[hdiv_row].chars().collect();
+
+    // The horizontal divider must have ┤ exactly at the vertical divider column
+    assert_eq!(
+        row_chars[divider_col], '┤',
+        "expected ┤ at divider column {} but got {:?}: {:?}",
+        divider_col, row_chars[divider_col], lines[hdiv_row]
+    );
+}
+
+#[test]
 fn render_name_truncation() {
     let node = layout_parser::parse("1f76,80x24,0,0,0").unwrap();
     let lines =
