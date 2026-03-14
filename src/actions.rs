@@ -24,6 +24,7 @@ pub fn handle(args: Args) -> Result<()> {
         Commands::Save { session_name } => save(session_name.as_deref()),
         Commands::Open { session_name } => open(&session_name),
         Commands::Edit { session_name } => edit(session_name.as_deref()),
+        Commands::Reload { session_name } => reload(session_name.as_deref()),
         Commands::Delete { session_name } => delete(&session_name),
         Commands::Menu {
             preview,
@@ -100,6 +101,36 @@ pub fn edit(session_name: Option<&str>) -> Result<()> {
         .arg("-c")
         .arg(format!("$EDITOR {path_str}"))
         .status()?;
+
+    Ok(())
+}
+
+/// Reloads a running session from its saved config.
+pub fn reload(session_name: Option<&str>) -> Result<()> {
+    anyhow::ensure!(
+        std::env::var("TMUX").is_ok(),
+        "Reload requires being inside a tmux session"
+    );
+
+    let name = match session_name {
+        Some(n) => n.to_string(),
+        None => get_session_name()?,
+    };
+
+    anyhow::ensure!(
+        is_active_session(&name)?,
+        "Session '{}' is not currently active",
+        name
+    );
+
+    let yaml = load_config(StorageKind::Session, &name)
+        .context("No saved config found for this session")?;
+
+    let session: Session = serde_yaml::from_str(&yaml).with_context(|| {
+        format!("Failed to deserialize session from yaml {yaml}")
+    })?;
+
+    reload_session(&session).context("Failed to reload session")?;
 
     Ok(())
 }

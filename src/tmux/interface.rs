@@ -35,37 +35,53 @@ pub fn get_session(session_name: Option<&str>) -> Result<Session> {
 /// Restores a [`Session`] by generating a shell script that creates a temp
 /// session, configures windows/panes, then renames it to avoid conflicts.
 pub fn restore_session(session: &Session) -> Result<()> {
-    let temp_session_name = format!("tsman-temp-{}", std::process::id());
+    let temp_name = format!("tsman-temp-{}", std::process::id());
+    create_session_from_config(session, &temp_name)?;
+    rename_session(&temp_name, &session.name)?;
+    attach_to_session(&session.name)
+}
 
+/// Kills a running session and recreates it from the saved config.
+///
+/// Creates a new session under a temp name, switches the client to it,
+/// kills the old session, then renames. This avoids tmux closing when
+/// reloading the currently attached session.
+pub fn reload_session(session: &Session) -> Result<()> {
+    let temp_name = format!("tsman-temp-{}", std::process::id());
+    create_session_from_config(session, &temp_name)?;
+    attach_to_session(&temp_name)?;
+    close_session(&session.name)?;
+    rename_session(&temp_name, &session.name)?;
+    Ok(())
+}
+
+/// Creates a tmux session from config under the given name, without
+/// attaching or renaming.
+fn create_session_from_config(
+    session: &Session,
+    session_name: &str,
+) -> Result<()> {
     let mut script_str = String::new();
 
     script_str += &format!(
         "tmux new-session -d -s {} -c {}\n",
-        temp_session_name,
+        session_name,
         escape(Cow::from(&session.work_dir))
     );
 
     let first_window = &session.windows[0];
 
-    script_str +=
-        &get_window_config_cmd(&temp_session_name, session, first_window)?;
+    script_str += &get_window_config_cmd(session_name, session, first_window)?;
 
     for window in session.windows.iter().skip(1) {
         script_str += &format!(
             "tmux new-window -d -t {} -c {}\n",
-            temp_session_name,
+            session_name,
             escape(Cow::from(&session.work_dir))
         );
 
-        script_str +=
-            &get_window_config_cmd(&temp_session_name, session, window)?;
+        script_str += &get_window_config_cmd(session_name, session, window)?;
     }
-
-    // this helps avoid naming conflicts inside tmux
-    script_str += &format!(
-        "tmux rename-session -t {} {}\n",
-        temp_session_name, session.name
-    );
 
     let script = NamedTempFile::new()?;
 
@@ -76,7 +92,7 @@ pub fn restore_session(session: &Session) -> Result<()> {
         .status()
         .context("Failed to reconstruct session")?;
 
-    attach_to_session(&session.name)
+    Ok(())
 }
 
 /// Returns whether a tmux session with the given name exists.

@@ -69,6 +69,18 @@ for manual editing.",
     },
 
     #[command(
+        about = "Reload a running session from its saved config",
+        long_about = "Kill the running session and recreate it from the saved
+YAML config. Must be run from inside tmux.",
+        alias = "r"
+    )]
+    Reload {
+        /// Name of the session (default: name of current session)
+        #[arg(value_parser = validate_session_name)]
+        session_name: Option<String>,
+    },
+
+    #[command(
         about = "Delete specified session",
         long_about = "Remove the config file of the specified session from the
 config storage directory.",
