@@ -31,5 +31,8 @@ jobs:
       - name: Lint (Clippy)
         run: cargo clippy --all-targets --release
 
+      - name: Test
+        run: cargo test
+
       - name: Build
         run: cargo build --release
