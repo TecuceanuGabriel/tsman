@@ -63,6 +63,7 @@ impl MenuRenderer for DefaultMenuRenderer {
                 content_chunks[1],
                 &state.items,
                 &state.list_mode,
+                state.preview_scroll,
             );
         }
 
@@ -198,13 +199,16 @@ fn draw_preview_pane(
     chunk: Rect,
     items: &ItemsState,
     list_mode: &ListMode,
+    scroll: u16,
 ) {
     let preview_block = Block::default().borders(Borders::ALL).title("Preview");
 
     let available_width = chunk.width.saturating_sub(2) as usize;
     let preview_content =
         generate_preview_content(items, list_mode, available_width);
-    let preview = Paragraph::new(preview_content).block(preview_block);
+    let preview = Paragraph::new(preview_content)
+        .block(preview_block)
+        .scroll((scroll, 0));
 
     frame.render_widget(preview, chunk);
 }
@@ -298,9 +302,10 @@ fn draw_help_popup(f: &mut Frame) {
     ];
 
     let ui_text = vec![
-        Line::from("C-t → Toggle preview"),
-        Line::from("C-h → Toggle help"),
-        Line::from("C-w → Delete last word"),
+        Line::from("C-t       → Toggle preview"),
+        Line::from("C-h       → Toggle help"),
+        Line::from("C-w       → Delete last word"),
+        Line::from("S-↑ / S-↓ → Scroll preview"),
     ];
 
     let popup_text = vec![

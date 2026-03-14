@@ -32,6 +32,7 @@ pub struct MenuState<'a> {
     pub list_mode: ListMode,
     pub pending_create_name: String,
     pub ui_flags: UiFlags,
+    pub preview_scroll: u16,
 
     pub should_exit: bool,
 }
@@ -57,6 +58,7 @@ impl<'a> MenuState<'a> {
             list_mode: ListMode::Sessions,
             pending_create_name: String::new(),
             ui_flags: UiFlags::new(show_preview, ask_for_confirmation),
+            preview_scroll: 0,
             should_exit: false,
         }
     }

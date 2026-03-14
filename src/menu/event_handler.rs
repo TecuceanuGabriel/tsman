@@ -38,27 +38,33 @@ impl EventHandler for DefaultEventHandler {
 }
 
 fn handle_normal_mode_key(key: KeyEvent) -> MenuAction {
-    match (key.modifiers.contains(KeyModifiers::CONTROL), key.code) {
-        (true, KeyCode::Char('p')) => MenuAction::MoveSelection(-1),
-        (true, KeyCode::Char('n')) => MenuAction::MoveSelection(1),
-        (true, KeyCode::Char('r')) => MenuAction::EnterRenameMode,
-        (true, KeyCode::Char('e')) => MenuAction::Edit,
-        (true, KeyCode::Char('s')) => MenuAction::Save,
-        (true, KeyCode::Char('d')) => MenuAction::Delete,
-        (true, KeyCode::Char('k')) => MenuAction::Kill,
-        (true, KeyCode::Char('o')) => MenuAction::Reload,
-        (true, KeyCode::Char('c')) => MenuAction::Exit,
-        (true, KeyCode::Char('l')) => MenuAction::ToggleListMode,
-        (true, KeyCode::Char('t')) => MenuAction::TogglePreview,
-        (true, KeyCode::Char('h')) => MenuAction::ToggleHelp,
-        (true, KeyCode::Char('w')) => MenuAction::RemoveLastWord,
+    let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
+    let shift = key.modifiers.contains(KeyModifiers::SHIFT);
 
-        (false, KeyCode::Char(c)) => MenuAction::AppendToInput(c),
-        (false, KeyCode::Backspace) => MenuAction::DeleteFromInput,
-        (false, KeyCode::Up) => MenuAction::MoveSelection(-1),
-        (false, KeyCode::Down) => MenuAction::MoveSelection(1),
-        (false, KeyCode::Enter) => MenuAction::Open,
-        (false, KeyCode::Esc) => MenuAction::Exit,
+    match (ctrl, shift, key.code) {
+        (true, _, KeyCode::Char('p')) => MenuAction::MoveSelection(-1),
+        (true, _, KeyCode::Char('n')) => MenuAction::MoveSelection(1),
+        (true, _, KeyCode::Char('r')) => MenuAction::EnterRenameMode,
+        (true, _, KeyCode::Char('e')) => MenuAction::Edit,
+        (true, _, KeyCode::Char('s')) => MenuAction::Save,
+        (true, _, KeyCode::Char('d')) => MenuAction::Delete,
+        (true, _, KeyCode::Char('k')) => MenuAction::Kill,
+        (true, _, KeyCode::Char('o')) => MenuAction::Reload,
+        (true, _, KeyCode::Char('c')) => MenuAction::Exit,
+        (true, _, KeyCode::Char('l')) => MenuAction::ToggleListMode,
+        (true, _, KeyCode::Char('t')) => MenuAction::TogglePreview,
+        (true, _, KeyCode::Char('h')) => MenuAction::ToggleHelp,
+        (true, _, KeyCode::Char('w')) => MenuAction::RemoveLastWord,
+
+        (false, true, KeyCode::Up) => MenuAction::ScrollPreviewUp,
+        (false, true, KeyCode::Down) => MenuAction::ScrollPreviewDown,
+
+        (false, _, KeyCode::Char(c)) => MenuAction::AppendToInput(c),
+        (false, _, KeyCode::Backspace) => MenuAction::DeleteFromInput,
+        (false, _, KeyCode::Up) => MenuAction::MoveSelection(-1),
+        (false, _, KeyCode::Down) => MenuAction::MoveSelection(1),
+        (false, _, KeyCode::Enter) => MenuAction::Open,
+        (false, _, KeyCode::Esc) => MenuAction::Exit,
 
         _ => MenuAction::Nop,
     }

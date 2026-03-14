@@ -13,6 +13,8 @@ pub enum MenuAction {
     DeleteFromInput,
     RemoveLastWord,
     TogglePreview,
+    ScrollPreviewDown,
+    ScrollPreviewUp,
     ToggleHelp,
     HideConfirmation,
     EnterRenameMode,

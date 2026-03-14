@@ -56,7 +56,8 @@ impl ActionDispatcher for DefaultActionDispacher {
             MenuAction::Kill => handle_kill(state)?,
             MenuAction::Reload => handle_reload(state)?,
             MenuAction::MoveSelection(delta) => {
-                state.items.move_selection(delta)
+                state.items.move_selection(delta);
+                state.preview_scroll = 0;
             }
             MenuAction::RemoveLastWord => {
                 state.handle_textarea_input(|t| {
@@ -75,6 +76,12 @@ impl ActionDispatcher for DefaultActionDispacher {
             }
             MenuAction::TogglePreview => {
                 state.ui_flags.show_preview = !state.ui_flags.show_preview;
+            }
+            MenuAction::ScrollPreviewDown => {
+                state.preview_scroll = state.preview_scroll.saturating_add(1);
+            }
+            MenuAction::ScrollPreviewUp => {
+                state.preview_scroll = state.preview_scroll.saturating_sub(1);
             }
             MenuAction::ToggleHelp => {
                 if state.mode == MenuMode::HelpPopup {
