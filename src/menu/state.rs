@@ -3,7 +3,11 @@ use std::time::{Duration, Instant};
 use ratatui::style::Style;
 use tui_textarea::TextArea;
 
-use crate::menu::{item::MenuItem, items_state::ItemsState, ui_flags::UiFlags};
+use crate::{
+    menu::{item::MenuItem, items_state::ItemsState, ui_flags::UiFlags},
+    persistence::{StorageKind, load_config},
+    tmux::{layout::Layout as TmuxLayout, session::Session},
+};
 
 /// Whether the menu is showing sessions or layouts.
 #[derive(PartialEq)]
@@ -39,6 +43,9 @@ pub struct MenuState<'a> {
     pub last_key_instant: Option<Instant>,
 
     pub should_exit: bool,
+
+    /// Cached preview: (item_name, is_layout_mode, width, content)
+    preview_cache: Option<(String, bool, usize, String)>,
 }
 
 impl<'a> MenuState<'a> {
@@ -66,6 +73,7 @@ impl<'a> MenuState<'a> {
             last_key: None,
             last_key_instant: None,
             should_exit: false,
+            preview_cache: None,
         }
     }
 
@@ -112,5 +120,38 @@ impl<'a> MenuState<'a> {
         if self.mode == MenuMode::Normal {
             self.items.update_filter_and_reset(&text);
         }
+    }
+
+    /// Returns the preview content for the selected item, using a cache to
+    /// avoid re-loading and re-rendering on every frame.
+    pub fn get_cached_preview(&mut self, width: usize) -> String {
+        let is_layout = self.list_mode == ListMode::Layouts;
+        let name = match self.items.get_selected_item() {
+            Some((_, item)) => item.name,
+            None => return String::new(),
+        };
+
+        if let Some((ref cn, ci, cw, ref content)) = self.preview_cache {
+            if cn == &name && ci == is_layout && cw == width {
+                return content.clone();
+            }
+        }
+
+        let content = if is_layout {
+            load_config(StorageKind::Layout, &name)
+                .ok()
+                .and_then(|yaml| serde_yaml::from_str::<TmuxLayout>(&yaml).ok())
+                .map(|layout| layout.get_preview(width))
+                .unwrap_or_default()
+        } else {
+            load_config(StorageKind::Session, &name)
+                .ok()
+                .and_then(|yaml| serde_yaml::from_str::<Session>(&yaml).ok())
+                .map(|session| session.get_preview())
+                .unwrap_or_default()
+        };
+
+        self.preview_cache = Some((name, is_layout, width, content.clone()));
+        content
     }
 }

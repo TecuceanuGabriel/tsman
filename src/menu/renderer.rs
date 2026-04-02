@@ -11,13 +11,9 @@ use ratatui::{
     },
 };
 
-use crate::{
-    menu::{
-        items_state::ItemsState,
-        state::{ListMode, MenuMode, MenuState},
-    },
-    persistence::{StorageKind, load_config},
-    tmux::{layout::Layout as TmuxLayout, session::Session},
+use crate::menu::{
+    items_state::ItemsState,
+    state::{ListMode, MenuMode, MenuState},
 };
 
 // Monokai color palette
@@ -111,11 +107,13 @@ impl MenuRenderer for DefaultMenuRenderer {
         );
 
         if state.ui_flags.show_preview {
+            let available_width =
+                content_chunks[1].width.saturating_sub(2) as usize;
+            let preview_content = state.get_cached_preview(available_width);
             draw_preview_pane(
                 frame,
                 content_chunks[1],
-                &state.items,
-                &state.list_mode,
+                preview_content,
                 state.preview_scroll,
                 theme,
             );
@@ -380,8 +378,7 @@ fn render_help_hint(
 fn draw_preview_pane(
     frame: &mut Frame,
     chunk: Rect,
-    items: &ItemsState,
-    list_mode: &ListMode,
+    content: String,
     scroll: u16,
     theme: &Theme,
 ) {
@@ -391,39 +388,11 @@ fn draw_preview_pane(
         .border_style(theme.border)
         .title("Preview");
 
-    let available_width = chunk.width.saturating_sub(2) as usize;
-    let preview_content =
-        generate_preview_content(items, list_mode, available_width);
-    let preview = Paragraph::new(preview_content)
+    let preview = Paragraph::new(content)
         .block(preview_block)
         .scroll((scroll, 0));
 
     frame.render_widget(preview, chunk);
-}
-
-fn generate_preview_content(
-    items: &ItemsState,
-    list_mode: &ListMode,
-    width: usize,
-) -> String {
-    let Some((_, selection)) = items.get_selected_item() else {
-        return String::new();
-    };
-
-    match list_mode {
-        ListMode::Sessions => {
-            load_config(StorageKind::Session, &selection.name)
-                .ok()
-                .and_then(|yaml| serde_yaml::from_str::<Session>(&yaml).ok())
-                .map(|session| session.get_preview())
-                .unwrap_or_default()
-        }
-        ListMode::Layouts => load_config(StorageKind::Layout, &selection.name)
-            .ok()
-            .and_then(|yaml| serde_yaml::from_str::<TmuxLayout>(&yaml).ok())
-            .map(|layout| layout.get_preview(width))
-            .unwrap_or_default(),
-    }
 }
 
 fn draw_confirmation_popup(f: &mut Frame) {
