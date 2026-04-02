@@ -126,23 +126,25 @@ pub fn edit_config(kind: StorageKind, name: &str) -> Result<()> {
     Ok(())
 }
 
-/// Reloads a running session from its saved config.
+/// Reloads a session from its saved config.
+///
+/// - If the session is active and we are currently attached to it, uses a
+///   temp-session switch to avoid disconnecting the client.
+/// - If the session is active but we are not attached, kills and recreates
+///   it directly, then attaches.
+/// - If the session is not active, opens it fresh (equivalent to `open`).
 pub fn reload(session_name: Option<&str>) -> Result<()> {
-    anyhow::ensure!(
-        std::env::var("TMUX").is_ok(),
-        "Reload requires being inside a tmux session"
-    );
-
     let name = match session_name {
         Some(n) => n.to_string(),
-        None => get_session_name()?,
+        None => {
+            anyhow::ensure!(
+                std::env::var("TMUX").is_ok(),
+                "Reload requires a session name or being inside a tmux \
+                 session"
+            );
+            get_session_name()?
+        }
     };
-
-    anyhow::ensure!(
-        is_active_session(&name)?,
-        "Session '{}' is not currently active",
-        name
-    );
 
     let yaml = load_config(StorageKind::Session, &name)
         .context("No saved config found for this session")?;
@@ -151,7 +153,14 @@ pub fn reload(session_name: Option<&str>) -> Result<()> {
         format!("Failed to deserialize session from yaml {yaml}")
     })?;
 
-    reload_session(&session).context("Failed to reload session")?;
+    if is_active_session(&name)? {
+        let currently_attached =
+            get_session_name().ok().as_deref() == Some(&name);
+        reload_session(&session, currently_attached)
+            .context("Failed to reload session")?;
+    } else {
+        restore_session(&session).context("Failed to restore session")?;
+    }
 
     Ok(())
 }

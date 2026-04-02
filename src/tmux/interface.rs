@@ -43,15 +43,24 @@ pub fn restore_session(session: &Session) -> Result<()> {
 
 /// Kills a running session and recreates it from the saved config.
 ///
-/// Creates a new session under a temp name, switches the client to it,
-/// kills the old session, then renames. This avoids tmux closing when
-/// reloading the currently attached session.
-pub fn reload_session(session: &Session) -> Result<()> {
+/// When `currently_attached` is true, switches the client to the temp
+/// session before killing the old one to avoid tmux closing the client.
+/// When false, the kill is safe without a prior switch and the function
+/// attaches to the reloaded session at the end.
+pub fn reload_session(
+    session: &Session,
+    currently_attached: bool,
+) -> Result<()> {
     let temp_name = format!("tsman-temp-{}", std::process::id());
     create_session_from_config(session, &temp_name)?;
-    attach_to_session(&temp_name)?;
+    if currently_attached {
+        attach_to_session(&temp_name)?;
+    }
     close_session(&session.name)?;
     rename_session(&temp_name, &session.name)?;
+    if !currently_attached {
+        attach_to_session(&session.name)?;
+    }
     Ok(())
 }
 

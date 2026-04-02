@@ -279,10 +279,9 @@ fn handle_reload(state: &mut MenuState) -> Result<()> {
         return Ok(());
     };
 
-    if !selection.saved || !selection.active {
-        state.mode = MenuMode::ErrorPopup(
-            "Session must be both active and saved to reload".to_string(),
-        );
+    if !selection.saved {
+        state.mode =
+            MenuMode::ErrorPopup("Session must be saved to reload".to_string());
         return Ok(());
     }
 
