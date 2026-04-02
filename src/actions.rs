@@ -102,10 +102,11 @@ pub fn edit(session_name: Option<&str>) -> Result<()> {
     };
 
     let path_str = escape(path.as_os_str().to_string_lossy());
+    let editor = std::env::var("EDITOR").unwrap_or_else(|_| "vi".to_string());
 
     Command::new("sh")
         .arg("-c")
-        .arg(format!("$EDITOR {path_str}"))
+        .arg(format!("{editor} {path_str}"))
         .status()?;
 
     Ok(())
@@ -115,10 +116,11 @@ pub fn edit(session_name: Option<&str>) -> Result<()> {
 pub fn edit_config(kind: StorageKind, name: &str) -> Result<()> {
     let path = get_config_file_path(kind, name)?;
     let path_str = escape(path.as_os_str().to_string_lossy());
+    let editor = std::env::var("EDITOR").unwrap_or_else(|_| "vi".to_string());
 
     Command::new("sh")
         .arg("-c")
-        .arg(format!("$EDITOR {path_str}"))
+        .arg(format!("{editor} {path_str}"))
         .status()?;
 
     Ok(())
@@ -346,10 +348,11 @@ fn layout_edit(layout_name: &str) -> Result<()> {
     let path = get_config_file_path(StorageKind::Layout, layout_name)?;
 
     let path_str = escape(path.as_os_str().to_string_lossy());
+    let editor = std::env::var("EDITOR").unwrap_or_else(|_| "vi".to_string());
 
     Command::new("sh")
         .arg("-c")
-        .arg(format!("$EDITOR {path_str}"))
+        .arg(format!("{editor} {path_str}"))
         .status()?;
 
     Ok(())
