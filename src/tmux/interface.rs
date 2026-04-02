@@ -330,9 +330,13 @@ fn get_foreground_process(shell_pid: &str) -> Result<Option<(u32, String)>> {
 }
 
 fn get_process_children(shell_pid: &str) -> Result<Vec<(u32, String)>> {
+    let target_ppid = shell_pid
+        .trim()
+        .parse::<u32>()
+        .with_context(|| format!("Invalid shell PID: {shell_pid}"))?;
+
     let output = Command::new("ps")
-        .args(["-o", "pid=,args="])
-        .args(["--ppid", shell_pid])
+        .args(["ax", "-o", "pid=,ppid=,args="])
         .output()
         .with_context(|| {
             format!("Failed to get children of process #{shell_pid}")
@@ -347,10 +351,24 @@ fn get_process_children(shell_pid: &str) -> Result<Vec<(u32, String)>> {
         if trimmed.is_empty() {
             continue;
         }
-        if let Some((pid_str, cmdline)) = trimmed.split_once(' ')
-            && let Ok(pid) = pid_str.trim().parse::<u32>()
-        {
-            children.push((pid, cmdline.trim().to_string()));
+
+        let mut iter = trimmed.splitn(2, |c: char| c.is_ascii_whitespace());
+        let pid_str = iter.next().unwrap_or("").trim();
+        let remainder = iter.next().unwrap_or("").trim_start();
+
+        let mut iter2 = remainder.splitn(2, |c: char| c.is_ascii_whitespace());
+        let ppid_str = iter2.next().unwrap_or("").trim();
+        let cmdline = iter2.next().unwrap_or("").trim_start();
+
+        let Ok(pid) = pid_str.parse::<u32>() else {
+            continue;
+        };
+        let Ok(ppid) = ppid_str.parse::<u32>() else {
+            continue;
+        };
+
+        if ppid == target_ppid && !cmdline.is_empty() {
+            children.push((pid, cmdline.to_string()));
         }
     }
 
