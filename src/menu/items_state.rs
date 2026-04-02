@@ -94,7 +94,9 @@ impl ItemsState {
     /// Removes an item by name and adjusts the selection.
     pub fn remove_item(&mut self, idx: usize, item: MenuItem) {
         self.items.retain(|i| i.name != item.name);
-        self.list_state.select(Some(idx.saturating_sub(1)));
+        let new_len = self.filtered_items_idx.len().saturating_sub(1);
+        self.list_state
+            .select(Some(idx.min(new_len.saturating_sub(1))));
     }
 
     /// Replaces the entire item list, resetting filter and selection.
