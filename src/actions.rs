@@ -206,10 +206,13 @@ fn completions(shell: clap_complete::Shell) {
 fn menu(show_preview: bool, ask_for_confirmation: bool) -> Result<()> {
     let mut terminal = terminal_utils::init()?;
 
+    let current_session = get_session_name().ok();
+
     let mut menu = Menu::new(
         get_all_sessions()?,
         show_preview,
         ask_for_confirmation,
+        current_session.as_deref(),
         Box::new(DefaultMenuRenderer),
         Box::new(DefaultEventHandler),
         Box::new(DefaultActionDispacher),

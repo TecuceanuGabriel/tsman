@@ -36,12 +36,18 @@ impl<'a> Menu<'a> {
         items: Vec<MenuItem>,
         show_preview: bool,
         ask_for_confirmation: bool,
+        current_session: Option<&str>,
         renderer: Box<dyn MenuRenderer>,
         event_handler: Box<dyn EventHandler>,
         action_dispacher: Box<dyn ActionDispatcher>,
     ) -> Self {
         Self {
-            state: MenuState::new(items, show_preview, ask_for_confirmation),
+            state: MenuState::new(
+                items,
+                show_preview,
+                ask_for_confirmation,
+                current_session,
+            ),
             renderer,
             event_handler,
             action_dispacher,

@@ -14,11 +14,18 @@ pub struct ItemsState {
 
 impl ItemsState {
     /// Creates a new state, sorting items and selecting the first one.
-    pub fn new(mut items: Vec<MenuItem>) -> Self {
+    /// If `current_name` is provided the matching item is selected.
+    pub fn new(mut items: Vec<MenuItem>, current_name: Option<&str>) -> Self {
         let mut list_state = ListState::default();
         list_state.select(Some(0));
 
         sort_items(&mut items);
+
+        if let Some(name) = current_name
+            && let Some(idx) = items.iter().position(|i| i.name == name)
+        {
+            list_state.select(Some(idx));
+        }
 
         let mut state = Self {
             filtered_items_idx: (0..items.len())

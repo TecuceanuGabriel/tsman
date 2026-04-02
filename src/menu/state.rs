@@ -54,6 +54,7 @@ impl<'a> MenuState<'a> {
         items: Vec<MenuItem>,
         show_preview: bool,
         ask_for_confirmation: bool,
+        current_session: Option<&str>,
     ) -> Self {
         let mut filter_input = TextArea::default();
         filter_input.set_cursor_line_style(Style::default());
@@ -64,7 +65,7 @@ impl<'a> MenuState<'a> {
         Self {
             filter_input,
             rename_input,
-            items: ItemsState::new(items),
+            items: ItemsState::new(items, current_session),
             mode: MenuMode::Normal,
             list_mode: ListMode::Sessions,
             pending_create_name: String::new(),
@@ -131,10 +132,12 @@ impl<'a> MenuState<'a> {
             None => return String::new(),
         };
 
-        if let Some((ref cn, ci, cw, ref content)) = self.preview_cache {
-            if cn == &name && ci == is_layout && cw == width {
-                return content.clone();
-            }
+        if let Some((ref cn, ci, cw, ref content)) = self.preview_cache
+            && cn == &name
+            && ci == is_layout
+            && cw == width
+        {
+            return content.clone();
         }
 
         let content = if is_layout {
