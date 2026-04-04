@@ -25,6 +25,9 @@ pub enum MenuAction {
     ConfirmCreateName,
     CreateFromLayout,
     ExitCreateMode,
+    TriggerCompletion,
+    CompletionSelectPrev,
+    CompletionSelectNext,
     Exit,
     Nop,
 }

@@ -44,6 +44,9 @@ pub struct MenuState<'a> {
 
     pub should_exit: bool,
 
+    pub path_completions: Vec<String>,
+    pub completion_idx: Option<usize>,
+
     /// Cached preview: (item_name, is_layout_mode, width, content)
     preview_cache: Option<(String, bool, usize, String)>,
 }
@@ -74,8 +77,16 @@ impl<'a> MenuState<'a> {
             last_key: None,
             last_key_instant: None,
             should_exit: false,
+            path_completions: Vec::new(),
+            completion_idx: None,
             preview_cache: None,
         }
+    }
+
+    /// Clears the completion dropdown state.
+    pub fn clear_completions(&mut self) {
+        self.path_completions.clear();
+        self.completion_idx = None;
     }
 
     /// How long the last-key indicator stays visible.

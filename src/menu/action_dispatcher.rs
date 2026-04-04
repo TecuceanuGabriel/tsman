@@ -105,6 +105,9 @@ impl ActionDispatcher for DefaultActionDispacher {
             MenuAction::ConfirmCreateName => handle_confirm_create_name(state)?,
             MenuAction::CreateFromLayout => handle_create_from_layout(state)?,
             MenuAction::ExitCreateMode => handle_exit_create_mode(state),
+            MenuAction::TriggerCompletion => {}
+            MenuAction::CompletionSelectPrev => {}
+            MenuAction::CompletionSelectNext => {}
             MenuAction::Exit => {
                 state.should_exit = true;
             }
