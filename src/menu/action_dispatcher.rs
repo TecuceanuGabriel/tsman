@@ -464,7 +464,10 @@ fn compute_completions(input: &str) -> Vec<String> {
         .filter_map(|e| e.ok())
         .filter(|e| e.file_type().map(|ft| ft.is_dir()).unwrap_or(false))
         .filter_map(|e| e.file_name().into_string().ok())
-        .filter(|name| !name.starts_with('.') && name.starts_with(&stem))
+        .filter(|name| {
+            !name.starts_with('.')
+                && name.to_lowercase().starts_with(&stem.to_lowercase())
+        })
         .map(|name| format!("{dir}{name}/"))
         .collect();
     completions.sort();
