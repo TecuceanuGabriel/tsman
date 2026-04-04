@@ -144,6 +144,9 @@ fn handle_create_workdir_mode_key(key: KeyEvent) -> MenuAction {
 
         (false, KeyCode::Char(c)) => MenuAction::AppendToInput(c),
         (false, KeyCode::Backspace) => MenuAction::DeleteFromInput,
+        (false, KeyCode::Tab) => MenuAction::TriggerCompletion,
+        (false, KeyCode::Up) => MenuAction::CompletionSelectPrev,
+        (false, KeyCode::Down) => MenuAction::CompletionSelectNext,
         (false, KeyCode::Enter) => MenuAction::CreateFromLayout,
         (false, KeyCode::Esc) => MenuAction::ExitCreateMode,
 
@@ -166,6 +169,7 @@ fn key_event_to_label(key: KeyEvent) -> Option<String> {
         (false, false, KeyCode::Backspace) => Some("Bksp".into()),
         (false, false, KeyCode::Up) => Some("Up".into()),
         (false, false, KeyCode::Down) => Some("Down".into()),
+        (false, false, KeyCode::Tab) => Some("Tab".into()),
         _ => None,
     }
 }

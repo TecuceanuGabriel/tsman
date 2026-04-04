@@ -63,21 +63,33 @@ impl ActionDispatcher for DefaultActionDispacher {
                 state.handle_textarea_input(|t| {
                     t.delete_word();
                 });
+                if state.mode == MenuMode::CreateFromLayoutWorkdir {
+                    state.clear_completions();
+                }
             }
             MenuAction::DeleteToLineStart => {
                 state.handle_textarea_input(|t| {
                     t.delete_line_by_head();
                 });
+                if state.mode == MenuMode::CreateFromLayoutWorkdir {
+                    state.clear_completions();
+                }
             }
             MenuAction::AppendToInput(c) => {
                 state.handle_textarea_input(|t| {
                     t.insert_char(c);
                 });
+                if state.mode == MenuMode::CreateFromLayoutWorkdir {
+                    state.clear_completions();
+                }
             }
             MenuAction::DeleteFromInput => {
                 state.handle_textarea_input(|t| {
                     t.delete_char();
                 });
+                if state.mode == MenuMode::CreateFromLayoutWorkdir {
+                    state.clear_completions();
+                }
             }
             MenuAction::TogglePreview => {
                 state.ui_flags.show_preview = !state.ui_flags.show_preview;
@@ -105,9 +117,13 @@ impl ActionDispatcher for DefaultActionDispacher {
             MenuAction::ConfirmCreateName => handle_confirm_create_name(state)?,
             MenuAction::CreateFromLayout => handle_create_from_layout(state)?,
             MenuAction::ExitCreateMode => handle_exit_create_mode(state),
-            MenuAction::TriggerCompletion => {}
-            MenuAction::CompletionSelectPrev => {}
-            MenuAction::CompletionSelectNext => {}
+            MenuAction::TriggerCompletion => handle_trigger_completion(state),
+            MenuAction::CompletionSelectPrev => {
+                handle_completion_select(state, -1);
+            }
+            MenuAction::CompletionSelectNext => {
+                handle_completion_select(state, 1);
+            }
             MenuAction::Exit => {
                 state.should_exit = true;
             }
@@ -386,7 +402,8 @@ fn handle_confirm_create_name(state: &mut MenuState) -> Result<()> {
 }
 
 fn handle_create_from_layout(state: &mut MenuState) -> Result<()> {
-    let work_dir = state.rename_input.lines().join("\n");
+    let work_dir_raw = state.rename_input.lines().join("\n");
+    let work_dir = expand_tilde(&work_dir_raw);
 
     let Some((_, selection)) = state.items.get_selected_item() else {
         return Ok(());
@@ -413,4 +430,80 @@ fn handle_create_from_layout(state: &mut MenuState) -> Result<()> {
 fn handle_exit_create_mode(state: &mut MenuState) {
     state.mode = MenuMode::Normal;
     state.rename_input.delete_line_by_head();
+    state.clear_completions();
+}
+
+fn expand_tilde(path: &str) -> String {
+    let home = std::env::var("HOME").unwrap_or_default();
+    if path == "~" {
+        home
+    } else if let Some(rest) = path.strip_prefix("~/") {
+        format!("{home}/{rest}")
+    } else {
+        path.to_string()
+    }
+}
+
+fn split_completion_input(input: &str) -> (String, String) {
+    let expanded = expand_tilde(input);
+    if let Some(pos) = expanded.rfind('/') {
+        let dir = expanded[..=pos].to_string();
+        let stem = expanded[pos + 1..].to_string();
+        (dir, stem)
+    } else {
+        ("./".to_string(), expanded)
+    }
+}
+
+fn compute_completions(input: &str) -> Vec<String> {
+    let (dir, stem) = split_completion_input(input);
+    let Ok(entries) = std::fs::read_dir(&dir) else {
+        return Vec::new();
+    };
+    let mut completions: Vec<String> = entries
+        .filter_map(|e| e.ok())
+        .filter(|e| e.file_type().map(|ft| ft.is_dir()).unwrap_or(false))
+        .filter_map(|e| e.file_name().into_string().ok())
+        .filter(|name| !name.starts_with('.') && name.starts_with(&stem))
+        .map(|name| format!("{dir}{name}/"))
+        .collect();
+    completions.sort();
+    completions
+}
+
+fn apply_completion(state: &mut MenuState, completion: &str) {
+    state.rename_input.delete_line_by_head();
+    state.rename_input.insert_str(completion);
+}
+
+fn handle_trigger_completion(state: &mut MenuState) {
+    let input = state.rename_input.lines().join("\n");
+    let completions = compute_completions(&input);
+    match completions.len() {
+        0 => {
+            state.clear_completions();
+        }
+        1 => {
+            apply_completion(state, &completions[0]);
+            state.clear_completions();
+        }
+        _ => {
+            let first = completions[0].clone();
+            apply_completion(state, &first);
+            state.path_completions = completions;
+            state.completion_idx = Some(0);
+        }
+    }
+}
+
+fn handle_completion_select(state: &mut MenuState, delta: i32) {
+    if state.path_completions.is_empty() {
+        return;
+    }
+    let len = state.path_completions.len() as i32;
+    let current = state.completion_idx.unwrap_or(0) as i32;
+    let next = current.saturating_add(delta).rem_euclid(len) as usize;
+    state.completion_idx = Some(next);
+    let completion = state.path_completions[next].clone();
+    apply_completion(state, &completion);
 }
