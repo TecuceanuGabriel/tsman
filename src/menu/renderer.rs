@@ -6,8 +6,8 @@ use ratatui::{
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{
-        Block, BorderType, Borders, Clear, List, ListItem, Paragraph,
-        Scrollbar, ScrollbarOrientation, ScrollbarState, Wrap,
+        Block, BorderType, Borders, Clear, List, ListItem, ListState,
+        Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState, Wrap,
     },
 };
 
@@ -61,12 +61,13 @@ const ERROR_POPUP_STYLE: Style =
 const RENAME_PROMPT_STYLE: Style = Style::new().fg(MONOKAI_ORANGE);
 
 const PREVIEW_WIDTH_RATIO: u16 = 40;
+const MAX_COMPLETION_ROWS: u16 = 8;
 
 const CONFIRMATION_POPUP_WIDTH: u16 = 15;
 const CONFIRMATION_POPUP_HEIGHT: u16 = 3;
 
 const HELP_POPUP_WIDTH: u16 = 60;
-const HELP_POPUP_HEIGHT: u16 = 16;
+const HELP_POPUP_HEIGHT: u16 = 22;
 
 /// Draws the menu UI to a ratatui [`Frame`].
 pub trait MenuRenderer {
@@ -97,6 +98,7 @@ impl MenuRenderer for DefaultMenuRenderer {
         );
 
         render_input_field(frame, left_content_chunks[1], state, theme);
+        draw_completion_dropdown(frame, left_content_chunks[1], state);
 
         render_help_hint(
             frame,
@@ -471,11 +473,24 @@ fn draw_help_popup(f: &mut Frame) {
         Line::from("n/N/Esc/q → Abort"),
     ];
 
+    let completion_block = Block::default()
+        .title("Workdir Completion")
+        .borders(Borders::ALL)
+        .style(POPUP_STYLE);
+
+    let completion_text = vec![
+        Line::from("Tab / C-n   → Open dropdown / cycle next"),
+        Line::from("S-Tab / C-p → Cycle prev"),
+        Line::from("↑ / ↓       → Prev / next"),
+        Line::from("Enter       → Confirm path"),
+    ];
+
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(HELP_POPUP_HEIGHT / 2),
-            Constraint::Length(HELP_POPUP_HEIGHT / 2),
+            Constraint::Length(8),
+            Constraint::Length(8),
+            Constraint::Length(6),
         ])
         .split(popup_area);
 
@@ -502,6 +517,10 @@ fn draw_help_popup(f: &mut Frame) {
         Paragraph::new(popup_text).block(popup_block),
         bottom_chunks[1],
     );
+    f.render_widget(
+        Paragraph::new(completion_text).block(completion_block),
+        chunks[2],
+    );
 }
 
 fn draw_error(f: &mut Frame, message: &str) {
@@ -519,6 +538,55 @@ fn draw_error(f: &mut Frame, message: &str) {
         .wrap(Wrap { trim: false });
 
     f.render_widget(paragraph.centered(), popup_area);
+}
+
+fn draw_completion_dropdown(
+    frame: &mut Frame,
+    input_area: Rect,
+    state: &MenuState,
+) {
+    if state.path_completions.is_empty()
+        || state.mode != MenuMode::CreateFromLayoutWorkdir
+    {
+        return;
+    }
+
+    let count = state.path_completions.len() as u16;
+    let inner_rows = count.min(MAX_COMPLETION_ROWS);
+    let height = inner_rows.saturating_add(2); // borders
+
+    if input_area.y < height {
+        return;
+    }
+
+    let dropdown_area = Rect {
+        x: input_area.x,
+        y: input_area.y.saturating_sub(height),
+        width: input_area.width,
+        height,
+    };
+
+    frame.render_widget(Clear, dropdown_area);
+
+    let items: Vec<ListItem> = state
+        .path_completions
+        .iter()
+        .map(|c| ListItem::new(c.as_str()))
+        .collect();
+
+    let list = List::new(items)
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::new().fg(MONOKAI_ORANGE)),
+        )
+        .highlight_style(LAYOUTS_THEME.highlight);
+
+    let mut list_state = ListState::default();
+    list_state.select(state.completion_idx);
+
+    frame.render_stateful_widget(list, dropdown_area, &mut list_state);
 }
 
 fn create_centered_rect(area: Rect, length_x: u16, length_y: u16) -> Rect {
