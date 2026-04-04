@@ -477,21 +477,21 @@ fn apply_completion(state: &mut MenuState, completion: &str) {
 }
 
 fn handle_trigger_completion(state: &mut MenuState) {
+    if !state.path_completions.is_empty() {
+        handle_completion_select(state, 1);
+        return;
+    }
+
     let input = state.rename_input.lines().join("\n");
     let completions = compute_completions(&input);
     match completions.len() {
-        0 => {
-            state.clear_completions();
-        }
+        0 => {}
         1 => {
             apply_completion(state, &completions[0]);
-            state.clear_completions();
         }
         _ => {
-            let first = completions[0].clone();
-            apply_completion(state, &first);
             state.path_completions = completions;
-            state.completion_idx = Some(0);
+            state.completion_idx = None;
         }
     }
 }
@@ -501,8 +501,11 @@ fn handle_completion_select(state: &mut MenuState, delta: i32) {
         return;
     }
     let len = state.path_completions.len() as i32;
-    let current = state.completion_idx.unwrap_or(0) as i32;
-    let next = current.saturating_add(delta).rem_euclid(len) as usize;
+    let next = match state.completion_idx {
+        None if delta >= 0 => 0,
+        None => (len - 1) as usize,
+        Some(cur) => (cur as i32 + delta).rem_euclid(len) as usize,
+    };
     state.completion_idx = Some(next);
     let completion = state.path_completions[next].clone();
     apply_completion(state, &completion);

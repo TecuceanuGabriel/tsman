@@ -141,10 +141,13 @@ fn handle_create_workdir_mode_key(key: KeyEvent) -> MenuAction {
         (true, KeyCode::Char('c')) => MenuAction::ExitCreateMode,
         (true, KeyCode::Char('w')) => MenuAction::RemoveLastWord,
         (true, KeyCode::Char('u')) => MenuAction::DeleteToLineStart,
+        (true, KeyCode::Char('n')) => MenuAction::CompletionSelectNext,
+        (true, KeyCode::Char('p')) => MenuAction::CompletionSelectPrev,
 
         (false, KeyCode::Char(c)) => MenuAction::AppendToInput(c),
         (false, KeyCode::Backspace) => MenuAction::DeleteFromInput,
         (false, KeyCode::Tab) => MenuAction::TriggerCompletion,
+        (false, KeyCode::BackTab) => MenuAction::CompletionSelectPrev,
         (false, KeyCode::Up) => MenuAction::CompletionSelectPrev,
         (false, KeyCode::Down) => MenuAction::CompletionSelectNext,
         (false, KeyCode::Enter) => MenuAction::CreateFromLayout,
