@@ -22,12 +22,12 @@ a feature-rich session manager for tmux
 - Quickly save/restore/delete/edit/reload tmux sessions.
 - Work with layouts - reusable window/pane structure templates that can be applied to any working directory.
 - Manage sessions and layouts from the interactive TUI menu:
-    - Use keybindings to trigger actions (Save/Open/Edit/Delete/Rename/Kill/Reload).
-    - Toggle between sessions and layouts list views.
-    - Create new sessions from layout templates directly in the menu.
-    - Fuzzy-find sessions and layouts (powered by
-      [fuzzy-matcher](https://github.com/skim-rs/fuzzy-matcher)).
-    - View session/layout structure in the preview panel.
+  - Use keybindings to trigger actions (Save/Open/Edit/Delete/Rename/Kill/Reload).
+  - Toggle between sessions and layouts list views.
+  - Create new sessions from layout templates directly in the menu.
+  - Fuzzy-find sessions and layouts (powered by
+    [fuzzy-matcher](https://github.com/skim-rs/fuzzy-matcher)).
+  - View session/layout structure in the preview panel.
 - Shell completions for bash, zsh, and fish.
 
 ## Requirements
@@ -183,6 +183,14 @@ UI controls:
 | `C-u`        | Delete to line start        |
 | `Shift-Up`   | Scroll preview up           |
 | `Shift-Down` | Scroll preview down         |
+
+Workdir completion controls (in layout creation):
+
+| Keybinding          | Action                     |
+| ------------------- | -------------------------- |
+| `Tab` / `C-n`       | Open dropdown / cycle next |
+| `Shift-Tab` / `C-p` | Cycle prev                 |
+| `Up` / `Down`       | Prev / next                |
 
 Confirmation popup:
 

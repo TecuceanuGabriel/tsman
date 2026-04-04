@@ -67,7 +67,7 @@ const CONFIRMATION_POPUP_WIDTH: u16 = 15;
 const CONFIRMATION_POPUP_HEIGHT: u16 = 3;
 
 const HELP_POPUP_WIDTH: u16 = 60;
-const HELP_POPUP_HEIGHT: u16 = 16;
+const HELP_POPUP_HEIGHT: u16 = 22;
 
 /// Draws the menu UI to a ratatui [`Frame`].
 pub trait MenuRenderer {
@@ -473,11 +473,24 @@ fn draw_help_popup(f: &mut Frame) {
         Line::from("n/N/Esc/q → Abort"),
     ];
 
+    let completion_block = Block::default()
+        .title("Workdir Completion")
+        .borders(Borders::ALL)
+        .style(POPUP_STYLE);
+
+    let completion_text = vec![
+        Line::from("Tab / C-n   → Open dropdown / cycle next"),
+        Line::from("S-Tab / C-p → Cycle prev"),
+        Line::from("↑ / ↓       → Prev / next"),
+        Line::from("Enter       → Confirm path"),
+    ];
+
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(HELP_POPUP_HEIGHT / 2),
-            Constraint::Length(HELP_POPUP_HEIGHT / 2),
+            Constraint::Length(8),
+            Constraint::Length(8),
+            Constraint::Length(6),
         ])
         .split(popup_area);
 
@@ -503,6 +516,10 @@ fn draw_help_popup(f: &mut Frame) {
     f.render_widget(
         Paragraph::new(popup_text).block(popup_block),
         bottom_chunks[1],
+    );
+    f.render_widget(
+        Paragraph::new(completion_text).block(completion_block),
+        chunks[2],
     );
 }
 
