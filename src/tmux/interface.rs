@@ -191,6 +191,10 @@ fn get_next_session(session_name: &str) -> Result<Option<String>> {
 
 /// Returns the name of the currently attached tmux session.
 pub fn get_session_name() -> Result<String> {
+    if std::env::var("TMUX").is_err() {
+        anyhow::bail!("Not inside a tmux session");
+    }
+
     let output = Command::new("tmux")
         .arg("display-message")
         .arg("-p")
