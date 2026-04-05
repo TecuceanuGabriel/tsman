@@ -147,6 +147,11 @@ fn handle_open(state: &mut MenuState) -> Result<()> {
 
 fn handle_delete(state: &mut MenuState) -> Result<()> {
     if state.ui_flags.ask_for_confirmation && state.mode == MenuMode::Normal {
+        if let Some((_, selection)) = state.items.get_selected_item() {
+            let verb = if selection.saved { "Delete" } else { "Kill" };
+            state.pending_confirmation =
+                format!("{} '{}'?", verb, selection.name);
+        }
         state.mode = MenuMode::ConfirmationPopup;
         return Ok(());
     }

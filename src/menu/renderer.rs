@@ -64,7 +64,6 @@ const PREVIEW_WIDTH_RATIO: u16 = 40;
 const MAX_COMPLETION_ROWS: u16 = 8;
 
 const CONFIRMATION_POPUP_WIDTH: u16 = 15;
-const CONFIRMATION_POPUP_HEIGHT: u16 = 3;
 
 const HELP_POPUP_WIDTH: u16 = 60;
 const HELP_POPUP_HEIGHT: u16 = 22;
@@ -126,7 +125,9 @@ impl MenuRenderer for DefaultMenuRenderer {
         }
 
         match &state.mode {
-            MenuMode::ConfirmationPopup => draw_confirmation_popup(frame),
+            MenuMode::ConfirmationPopup => {
+                draw_confirmation_popup(frame, &state.pending_confirmation)
+            }
             MenuMode::HelpPopup => draw_help_popup(frame),
             MenuMode::ErrorPopup(message) => draw_error(frame, message),
             _ => {}
@@ -401,12 +402,10 @@ fn draw_preview_pane(
     frame.render_widget(preview, chunk);
 }
 
-fn draw_confirmation_popup(f: &mut Frame) {
-    let popup_area = create_centered_rect(
-        f.area(),
-        CONFIRMATION_POPUP_WIDTH,
-        CONFIRMATION_POPUP_HEIGHT,
-    );
+fn draw_confirmation_popup(f: &mut Frame, message: &str) {
+    // +4 for left/right borders and one space of padding each side
+    let width = (message.len() as u16 + 4).max(CONFIRMATION_POPUP_WIDTH);
+    let popup_area = create_centered_rect(f.area(), width, 4);
 
     f.render_widget(Clear, popup_area);
 
@@ -416,9 +415,12 @@ fn draw_confirmation_popup(f: &mut Frame) {
         .borders(Borders::ALL)
         .style(POPUP_STYLE);
 
-    let paragraph = Paragraph::new(Line::from("Y/n"))
-        .block(block)
-        .alignment(Alignment::Center);
+    let text = vec![
+        Line::from(message).alignment(Alignment::Center),
+        Line::from("Y/n").alignment(Alignment::Center),
+    ];
+
+    let paragraph = Paragraph::new(text).block(block);
 
     f.render_widget(paragraph, popup_area);
 }
