@@ -12,6 +12,7 @@ use crate::menu::action_dispatcher::DefaultActionDispacher;
 use crate::menu::event_handler::DefaultEventHandler;
 use crate::menu::item::MenuItem;
 use crate::menu::renderer::DefaultMenuRenderer;
+use crate::menu::ui_flags::UiFlags;
 use crate::persistence::{Persistence, StorageKind};
 use crate::terminal_utils;
 use crate::tmux::interface::*;
@@ -256,8 +257,7 @@ fn menu(
 
     let mut menu = Menu::new(
         get_all_sessions(&persistence)?,
-        show_preview,
-        ask_for_confirmation,
+        UiFlags::new(ask_for_confirmation, show_preview),
         current_session.as_deref(),
         persistence,
         Box::new(DefaultMenuRenderer),

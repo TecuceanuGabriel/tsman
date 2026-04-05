@@ -18,20 +18,11 @@ pub struct Config {
 }
 
 /// `[menu]` section - persistent UI preferences.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Default, Deserialize)]
 #[serde(default)]
 pub struct MenuConfig {
     pub preview: bool,
     pub ask_for_confirmation: bool,
-}
-
-impl Default for MenuConfig {
-    fn default() -> Self {
-        Self {
-            preview: false,
-            ask_for_confirmation: false,
-        }
-    }
 }
 
 /// `[storage]` section - override default storage directories.

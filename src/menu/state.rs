@@ -57,8 +57,7 @@ impl<'a> MenuState<'a> {
     /// Creates initial menu state from the given items and flags.
     pub fn new(
         items: Vec<MenuItem>,
-        show_preview: bool,
-        ask_for_confirmation: bool,
+        ui_flags: UiFlags,
         current_session: Option<&str>,
         persistence: Persistence,
     ) -> Self {
@@ -75,7 +74,7 @@ impl<'a> MenuState<'a> {
             mode: MenuMode::Normal,
             list_mode: ListMode::Sessions,
             pending_create_name: String::new(),
-            ui_flags: UiFlags::new(ask_for_confirmation, show_preview),
+            ui_flags,
             preview_scroll: 0,
             last_key: None,
             last_key_instant: None,
