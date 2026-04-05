@@ -5,7 +5,7 @@ Set Shell "fish"
 Set Theme "nord"
 
 Set FontSize 16
-Set FontFamily "FiraCode Nerd Font"
+Set FontFamily "FiraMono Nerd Font"
 
 Set Width 1200
 Set Height 700
@@ -21,7 +21,7 @@ Set Framerate 60
 
 # --- Background setup ---
 Hide
-Type "export EDITOR=vim"
+Type "export EDITOR=vi"
 Enter
 Sleep 300ms
 Type "tmux new-session -d -s start"
@@ -132,7 +132,15 @@ Sleep 1s
 Type "my-project"
 Enter
 Sleep 1s
-Type "/home/tecuc/Dev"
+Type "~/dev/test"
+Tab
+Sleep 500ms
+Type "py"
+Sleep 500ms
+Tab
+Sleep 500ms
+Tab
+Sleep 500ms
 Enter
 Sleep 1s
 
