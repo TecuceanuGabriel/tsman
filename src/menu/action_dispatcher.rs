@@ -17,7 +17,7 @@ use crate::{
         item::MenuItem,
         state::{ListMode, MenuMode},
     },
-    persistence::{self, StorageKind},
+    persistence::StorageKind,
     util::validate_session_name,
 };
 
@@ -139,7 +139,7 @@ fn handle_open(state: &mut MenuState) -> Result<()> {
         return Ok(());
     };
 
-    actions::open(&selection.name)?;
+    actions::open(&selection.name, &state.persistence)?;
     state.should_exit = true;
 
     Ok(())
@@ -158,7 +158,7 @@ fn handle_delete(state: &mut MenuState) -> Result<()> {
     };
 
     if selection.saved {
-        actions::delete(&selection.name)?;
+        actions::delete(&selection.name, &state.persistence)?;
         state
             .items
             .update_item(&selection.name, Some(false), None, None);
@@ -199,7 +199,7 @@ fn handle_edit(
         disable_raw_mode()?;
         execute!(io::stdout(), LeaveAlternateScreen)?;
 
-        actions::edit_config(kind, &selection.name)?;
+        actions::edit_config(&state.persistence, kind, &selection.name)?;
 
         enable_raw_mode()?;
         execute!(io::stdout(), EnterAlternateScreen)?;
@@ -215,7 +215,7 @@ fn handle_save(state: &mut MenuState) -> Result<()> {
     };
 
     if !selection.saved {
-        actions::save_target(&selection.name)?;
+        actions::save_target(&selection.name, &state.persistence)?;
         state
             .items
             .update_item(&selection.name, Some(true), None, None);
@@ -254,7 +254,7 @@ fn handle_rename(state: &mut MenuState) -> Result<()> {
             ListMode::Sessions => StorageKind::Session,
             ListMode::Layouts => StorageKind::Layout,
         };
-        actions::rename(kind, &selection.name, &new_name)?;
+        actions::rename(&state.persistence, kind, &selection.name, &new_name)?;
     }
 
     state.filter_input.delete_line_by_head();
@@ -304,7 +304,7 @@ fn handle_reload(state: &mut MenuState) -> Result<()> {
         return Ok(());
     }
 
-    match actions::reload(Some(&selection.name)) {
+    match actions::reload(Some(&selection.name), &state.persistence) {
         Ok(()) => {
             state.should_exit = true;
         }
@@ -340,10 +340,11 @@ fn handle_toggle_list_mode(state: &mut MenuState) -> Result<()> {
 
     let items = match state.list_mode {
         ListMode::Sessions => {
-            let saved: std::collections::HashSet<String> =
-                persistence::list_saved_configs(StorageKind::Session)?
-                    .into_iter()
-                    .collect();
+            let saved: std::collections::HashSet<String> = state
+                .persistence
+                .list_saved_configs(StorageKind::Session)?
+                .into_iter()
+                .collect();
             let active: std::collections::HashSet<String> =
                 tmux::interface::list_active_sessions()?
                     .into_iter()
@@ -361,12 +362,12 @@ fn handle_toggle_list_mode(state: &mut MenuState) -> Result<()> {
                 })
                 .collect()
         }
-        ListMode::Layouts => {
-            persistence::list_saved_configs(StorageKind::Layout)?
-                .into_iter()
-                .map(|name| MenuItem::new(name, true, false))
-                .collect()
-        }
+        ListMode::Layouts => state
+            .persistence
+            .list_saved_configs(StorageKind::Layout)?
+            .into_iter()
+            .map(|name| MenuItem::new(name, true, false))
+            .collect(),
     };
 
     state.items.replace_items(items);
@@ -415,6 +416,7 @@ fn handle_create_from_layout(state: &mut MenuState) -> Result<()> {
         &selection.name,
         &work_dir,
         Some(&session_name),
+        &state.persistence,
     ) {
         Ok(()) => {
             state.should_exit = true;

@@ -5,7 +5,7 @@ use tui_textarea::TextArea;
 
 use crate::{
     menu::{item::MenuItem, items_state::ItemsState, ui_flags::UiFlags},
-    persistence::{StorageKind, load_config},
+    persistence::{Persistence, StorageKind},
     tmux::{layout::Layout as TmuxLayout, session::Session},
 };
 
@@ -47,6 +47,8 @@ pub struct MenuState<'a> {
     pub path_completions: Vec<String>,
     pub completion_idx: Option<usize>,
 
+    pub persistence: Persistence,
+
     /// Cached preview: (item_name, is_layout_mode, width, content)
     preview_cache: Option<(String, bool, usize, String)>,
 }
@@ -58,6 +60,7 @@ impl<'a> MenuState<'a> {
         show_preview: bool,
         ask_for_confirmation: bool,
         current_session: Option<&str>,
+        persistence: Persistence,
     ) -> Self {
         let mut filter_input = TextArea::default();
         filter_input.set_cursor_line_style(Style::default());
@@ -79,6 +82,7 @@ impl<'a> MenuState<'a> {
             should_exit: false,
             path_completions: Vec::new(),
             completion_idx: None,
+            persistence,
             preview_cache: None,
         }
     }
@@ -120,7 +124,8 @@ impl<'a> MenuState<'a> {
         }
     }
 
-    /// Applies an edit operation to the active textarea and updates the filter if in normal mode.
+    /// Applies an edit operation to the active textarea and updates the
+    /// filter if in normal mode.
     pub fn handle_textarea_input<F>(&mut self, operation: F)
     where
         F: FnOnce(&mut TextArea),
@@ -152,13 +157,15 @@ impl<'a> MenuState<'a> {
         }
 
         let content = if is_layout {
-            load_config(StorageKind::Layout, &name)
+            self.persistence
+                .load_config(StorageKind::Layout, &name)
                 .ok()
                 .and_then(|yaml| serde_yaml::from_str::<TmuxLayout>(&yaml).ok())
                 .map(|layout| layout.get_preview(width))
                 .unwrap_or_default()
         } else {
-            load_config(StorageKind::Session, &name)
+            self.persistence
+                .load_config(StorageKind::Session, &name)
                 .ok()
                 .and_then(|yaml| serde_yaml::from_str::<Session>(&yaml).ok())
                 .map(|session| session.get_preview())
