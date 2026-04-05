@@ -128,6 +128,15 @@ Examples:
     },
 
     #[command(
+        about = "Initialize tsman configuration",
+        long_about = "Create default storage directories and write a \
+config file at ~/.config/tsman/config.toml. You will be prompted for \
+each setting; press Enter to accept the default.",
+        alias = "i"
+    )]
+    Init,
+
+    #[command(
         about = "Manage layout templates",
         long_about = "Manage layout templates. Layouts capture window/pane structure
 without working directories, allowing reuse across projects.",

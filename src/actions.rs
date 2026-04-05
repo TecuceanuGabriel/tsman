@@ -1,6 +1,8 @@
 //! Command dispatcher - routes parsed CLI arguments to the corresponding action.
 use std::collections::HashSet;
 use std::fs;
+use std::io::{self, Write};
+use std::path::PathBuf;
 use std::process::Command;
 
 use clap::CommandFactory;
@@ -18,6 +20,7 @@ use crate::terminal_utils;
 use crate::tmux::interface::*;
 use crate::tmux::layout::Layout;
 use crate::tmux::session::{Pane, Session, Window};
+use dirs::home_dir;
 
 use anyhow::{Context, Result};
 use shell_escape::escape;
@@ -59,6 +62,7 @@ pub fn handle(args: Args) -> Result<()> {
             completions(shell);
             Ok(())
         }
+        Commands::Init => init(),
         Commands::Layout { command } => handle_layout(command, &persistence),
     }
 }
@@ -441,4 +445,98 @@ fn layout_edit(layout_name: &str, persistence: &Persistence) -> Result<()> {
         .status()?;
 
     Ok(())
+}
+
+fn init() -> Result<()> {
+    let home = home_dir()
+        .ok_or_else(|| anyhow::anyhow!("Failed to determine HOME directory"))?;
+
+    let default_sessions = home.join(".config").join(".tsessions");
+    let default_layouts = home.join(".config").join(".tlayouts");
+
+    println!("Initializing tsman — press Enter to accept defaults.\n");
+
+    let sessions_dir = prompt_path(
+        &format!("Sessions directory [{}]: ", default_sessions.display()),
+        &default_sessions,
+    )?;
+    let layouts_dir = prompt_path(
+        &format!("Layouts directory [{}]: ", default_layouts.display()),
+        &default_layouts,
+    )?;
+
+    println!();
+    let preview = prompt_bool("Enable preview pane by default? [Y/n]: ")?;
+    let ask_for_confirmation =
+        prompt_bool("Prompt for confirmation before deleting? [Y/n]: ")?;
+    let show_key_presses =
+        prompt_bool("Show key press hints in menu? [Y/n]: ")?;
+
+    // Check for existing config before writing anything.
+    let config_dir = home.join(".config").join("tsman");
+    let config_path = config_dir.join("config.toml");
+    if config_path.exists() {
+        let overwrite = prompt_bool(&format!(
+            "\nConfig already exists at {}. Overwrite? [y/N]: ",
+            config_path.display()
+        ))?;
+        if !overwrite {
+            println!("Aborted.");
+            return Ok(());
+        }
+    }
+
+    fs::create_dir_all(&sessions_dir).with_context(|| {
+        format!("Failed to create {}", sessions_dir.display())
+    })?;
+    fs::create_dir_all(&layouts_dir).with_context(|| {
+        format!("Failed to create {}", layouts_dir.display())
+    })?;
+    fs::create_dir_all(&config_dir).with_context(|| {
+        format!("Failed to create {}", config_dir.display())
+    })?;
+
+    let sessions_str = sessions_dir.to_string_lossy();
+    let layouts_str = layouts_dir.to_string_lossy();
+    let toml = format!(
+        "[menu]\n\
+         preview = {preview}\n\
+         ask_for_confirmation = {ask_for_confirmation}\n\
+         show_key_presses = {show_key_presses}\n\
+         \n\
+         [storage]\n\
+         sessions_dir = \"{sessions_str}\"\n\
+         layouts_dir = \"{layouts_str}\"\n"
+    );
+
+    fs::write(&config_path, toml)?;
+    println!("\nDone! Config written to {}", config_path.display());
+
+    Ok(())
+}
+
+fn prompt_path(prompt: &str, default: &std::path::Path) -> Result<PathBuf> {
+    print!("{prompt}");
+    io::stdout().flush()?;
+    let mut input = String::new();
+    io::stdin().read_line(&mut input)?;
+    let trimmed = input.trim();
+    if trimmed.is_empty() {
+        return Ok(default.to_path_buf());
+    }
+    // Expand a leading `~` to the home directory.
+    if let Some(rest) = trimmed.strip_prefix("~/")
+        && let Some(home) = home_dir()
+    {
+        return Ok(home.join(rest));
+    }
+    Ok(PathBuf::from(trimmed))
+}
+
+fn prompt_bool(prompt: &str) -> Result<bool> {
+    print!("{prompt}");
+    io::stdout().flush()?;
+    let mut input = String::new();
+    io::stdin().read_line(&mut input)?;
+    Ok(!matches!(input.trim().to_lowercase().as_str(), "n" | "no"))
 }
