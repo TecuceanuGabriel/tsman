@@ -1,6 +1,7 @@
 //! Main entry point - parses CLI arguments and delegates to [`actions::handle`].
 mod actions;
 mod cli;
+mod config;
 mod menu;
 mod persistence;
 mod terminal_utils;
