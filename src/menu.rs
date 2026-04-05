@@ -34,9 +34,9 @@ impl<'a> Menu<'a> {
     /// Creates a new [`Menu`] with the given items and configuration.
     pub fn new(
         items: Vec<MenuItem>,
-        show_preview: bool,
-        ask_for_confirmation: bool,
+        ui_flags: crate::menu::ui_flags::UiFlags,
         current_session: Option<&str>,
+        persistence: crate::persistence::Persistence,
         renderer: Box<dyn MenuRenderer>,
         event_handler: Box<dyn EventHandler>,
         action_dispacher: Box<dyn ActionDispatcher>,
@@ -44,9 +44,9 @@ impl<'a> Menu<'a> {
         Self {
             state: MenuState::new(
                 items,
-                show_preview,
-                ask_for_confirmation,
+                ui_flags,
                 current_session,
+                persistence,
             ),
             renderer,
             event_handler,
