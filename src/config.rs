@@ -23,6 +23,7 @@ pub struct Config {
 pub struct MenuConfig {
     pub preview: bool,
     pub ask_for_confirmation: bool,
+    pub show_key_presses: bool,
 }
 
 /// `[storage]` section - override default storage directories.

@@ -48,7 +48,12 @@ pub fn handle(args: Args) -> Result<()> {
             let show_preview = preview || config.menu.preview;
             let confirm =
                 ask_for_confirmation || config.menu.ask_for_confirmation;
-            menu(show_preview, confirm, persistence)
+            menu(
+                show_preview,
+                confirm,
+                config.menu.show_key_presses,
+                persistence,
+            )
         }
         Commands::Completions { shell } => {
             completions(shell);
@@ -249,6 +254,7 @@ fn completions(shell: clap_complete::Shell) {
 fn menu(
     show_preview: bool,
     ask_for_confirmation: bool,
+    show_key_presses: bool,
     persistence: Persistence,
 ) -> Result<()> {
     let mut terminal = terminal_utils::init()?;
@@ -257,7 +263,7 @@ fn menu(
 
     let mut menu = Menu::new(
         get_all_sessions(&persistence)?,
-        UiFlags::new(ask_for_confirmation, show_preview),
+        UiFlags::new(ask_for_confirmation, show_preview, show_key_presses),
         current_session.as_deref(),
         persistence,
         Box::new(DefaultMenuRenderer),

@@ -104,7 +104,11 @@ impl MenuRenderer for DefaultMenuRenderer {
             frame,
             chunks[1],
             &state.list_mode,
-            state.visible_last_key(),
+            state
+                .ui_flags
+                .show_key_presses
+                .then(|| state.visible_last_key())
+                .flatten(),
             theme,
         );
 
