@@ -10,12 +10,25 @@
 
 a feature-rich session manager for tmux
 
-[Features](#features) • [Requirements](#requirements) • [Installation](#installation) • [Usage](#usage) •
-[Menu keybindings](#menu-keybindings) • [Configuration](#configuration) • [Notes](#notes)
-
 ![demo](./assets/demo.gif)
 
 </div>
+
+## Contents
+
+- [Features](#features)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Usage](#usage)
+  - [Sessions](#sessions)
+  - [Layouts](#layouts)
+  - [Menu](#menu-m)
+  - [Shell completions](#shell-completions-c)
+- [Menu keybindings](#menu-keybindings)
+- [Configuration](#configuration)
+  - [Config file](#config-file)
+  - [Shell / tmux integration](#shell--tmux-integration)
+- [Notes](#notes)
 
 ## Features
 
@@ -206,6 +219,33 @@ Help popup:
 | `C-h` / `C-c` / `Esc` / `q` / `Enter` | Close  |
 
 ## Configuration
+
+### Config file
+
+tsman reads `~/.config/tsman/config.toml` on startup.
+
+Run the init command to generate one interactively:
+
+```bash
+tsman init
+```
+
+All fields are optional - omit any section or key to use the default value.
+
+```toml
+[menu]
+preview = false              # start menu with the preview pane on
+ask_for_confirmation = false # prompt before deleting
+show_key_presses = false     # show key press hints in the menu footer
+
+[storage]
+sessions_dir = "~/.config/.tsessions" # where session YAML files are stored
+layouts_dir  = "~/.config/.tlayouts"  # where layout YAML files are stored
+```
+
+Precedence (highest to lowest): CLI flag > environment variable > config file > default.
+
+### Shell / tmux integration
 
 You can add keybindings/aliases to your tmux/shell config for faster usage.
 
