@@ -54,6 +54,12 @@ a feature-rich session manager for tmux
 cargo install tsman
 ```
 
+Or via Homebrew:
+```bash
+brew tap cmtonkinson/tap
+brew install tsman
+```
+
 ## Usage
 
 Each subcommand has a short alias shown in parentheses.
