@@ -212,6 +212,7 @@ pub fn get_session_name() -> Result<String> {
 pub fn list_active_sessions() -> Result<Vec<String>> {
     let status = Command::new("tmux")
         .arg("has-session")
+        .stderr(std::process::Stdio::null())
         .status()
         .context("Failed to check tmux server status")?;
 
